@@ -31,13 +31,13 @@ export function yummyPlayers(raw,number){
 export function parseAniDBPage(html,expectedId,Parser=DOMParser){
  if(typeof html!=='string'||html.length>3*1024*1024)throw new Error('AniDB вернул слишком большой ответ.');
  const document=new Parser().parseFromString(html,'text/html');const canonical=document.querySelector('link[rel="canonical"]')?.getAttribute('href')||document.querySelector('meta[property="og:url"]')?.getAttribute('content');
- try{const url=new URL(canonical);if(!['anidb.net','www.anidb.net'].includes(url.hostname)||url.pathname!==`/anime/${expectedId}`)throw 0;}catch{throw new Error('AniDB не подтвердил выбранное аниме.');}
+ try{const url=new URL(canonical,'https://anidb.net');if(url.protocol!=='https:'||!['anidb.net','www.anidb.net'].includes(url.hostname)||url.pathname.replace(/\/$/,'')!==`/anime/${expectedId}`)throw 0;}catch{throw new Error('AniDB не подтвердил выбранное аниме.');}
  const characters=[],seen=new Set();
  for(const bubble of document.querySelectorAll('#characterlist .g_bubble')){
-  const link=bubble.querySelector('a[href^="/character/"],a[href^="https://anidb.net/character/"]');if(!link)continue;
+  const links=[...bubble.querySelectorAll('a[href^="/character/"],a[href^="https://anidb.net/character/"]')];const link=links.find(a=>a.closest('.data .name')&&a.textContent.trim())||links.find(a=>a.textContent.trim());if(!link)continue;
   const id=Number(new URL(link.getAttribute('href'),'https://anidb.net').pathname.match(/^\/character\/(\d+)$/)?.[1]);const name=link.textContent.trim().slice(0,200);if(!id||!name||seen.has(id))continue;seen.add(id);
   const picture=bubble.querySelector('.thumb img')?.getAttribute('src');let imageUrl;
-  try{const url=new URL(picture,'https://anidb.net');if(url.protocol==='https:'&&url.hostname==='cdn.anidb.net'&&/^\/images\/main\/[\w-]+\.(?:png|jpe?g|webp)$/i.test(url.pathname))imageUrl=url.href;}catch{}
+  try{const url=new URL(picture,'https://anidb.net');const match=url.pathname.match(/^\/images\/(?:main|\d{1,4})\/([\w-]+\.(?:png|jpe?g|webp))$/i);if(url.protocol==='https:'&&url.hostname==='cdn.anidb.net'&&match)imageUrl=`https://cdn.anidb.net/images/main/${match[1]}`;}catch{}
   const actors=[];for(const actor of bubble.querySelectorAll('.seiyuu a[href*="/creator/"]')){const actorName=actor.textContent.trim().slice(0,160);if(actorName)actors.push({name:actorName,id:Number(actor.getAttribute('href').match(/\/creator\/(\d+)/)?.[1])||null});}
   const role=bubble.closest('.character')?'main character in':bubble.closest('.cast')?'secondary cast in':'appears in';characters.push({id,name,role,...(imageUrl?{imageUrl}:{}),actors});if(characters.length>=500)break;
  }

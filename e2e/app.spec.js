@@ -620,6 +620,9 @@ test('ASS/SSA renderer runs real WASM and local studio files persist without res
   await expect.poll(() => page.locator('#video-host canvas').evaluate(canvas => [...canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data].some((n, i) => i % 4 === 3 && n > 0)), { timeout: 10000 }).toBe(true);
   expect(await page.evaluate(() => { const canvas = document.querySelector('#video-host canvas').getBoundingClientRect(); const video = document.querySelector('video').getBoundingClientRect(); return Math.abs(canvas.left - video.left) < 2 && canvas.right <= video.right + 2 && canvas.top >= video.top - 2 && canvas.bottom <= video.bottom + 2; })).toBe(true);
   await expect.poll(() => page.locator('#video-host canvas').evaluate(canvas => [...canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data].some((n, i) => i % 4 === 0 && n > 180))).toBe(true);
+  await page.evaluate(()=>{dispatchEvent(new Event('resize'));dispatchEvent(new Event('resize'));});
+  await page.waitForTimeout(180); // Includes libass' delayed 100 ms resize.
+  expect(await page.locator('#video-host canvas').evaluate(canvas=>[...canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data].some((n,i)=>i%4===3&&n>0))).toBe(true);
   await page.locator('#video-host').screenshot({ path: 'test-results/ass-video.png' });
   expect(await page.evaluate(() => { const section = document.querySelector('#player-section').getBoundingClientRect(); const video = document.querySelector('#video-host').getBoundingClientRect(); return section.height - video.height; })).toBeLessThan(200);
   await expect(page.locator('#watch-original-language')).toHaveCount(0);

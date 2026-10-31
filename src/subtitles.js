@@ -5,7 +5,22 @@ function guardRendererDisposal(renderer) {
   const resize = renderer.resize.bind(renderer);
   // libass schedules a second resize 100 ms after window/element changes.
   // Its timer can outlive dispose; ignore work belonging to a closed renderer.
-  renderer.resize = (...args) => { if (!disposed) return resize(...args); };
+  renderer.resize = (...args) => {
+    if(disposed)return;
+    const canvas=renderer.canvas;
+    // The pinned library compares CSS '0px' with numeric 0 and assigns the
+    // same canvas dimensions again. That clears paused subtitles without a
+    // changed libass frame to repaint. Skip only an unchanged canvas/layout.
+    if(canvas?.width&&canvas?.height){
+      if(args[0]&&args[1]){if(args.length<=2&&args[0]===canvas.width&&args[1]===canvas.height)return;}
+      else if(renderer.video&&renderer.canvasParent){
+        const box=renderer.getVideoPosition();const offset=renderer.canvasParent.getBoundingClientRect().top-renderer.video.getBoundingClientRect().top;
+        const same=(style,value)=>Number.isFinite(value)&&Math.abs(parseFloat(style)-value)<.01;
+        if(same(canvas.style.width,box.width)&&same(canvas.style.height,box.height)&&same(canvas.style.left,box.x)&&same(canvas.style.top,box.y-offset))return;
+      }
+    }
+    return resize(...args);
+  };
   renderer.dispose = () => {
     if (disposed) return;
     disposed = true;
