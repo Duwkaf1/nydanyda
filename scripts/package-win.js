@@ -18,13 +18,14 @@ for (const item of output) {
   for (const file of await readdir(locales, { withFileTypes: true })) {
     if (file.isFile() && file.name.endsWith('.pak') && !['ru.pak', 'en-US.pak'].includes(file.name)) await rm(path.join(locales, file.name));
   }
+  await copyFile('data/LICENSE-anime-crosswalk.txt', path.join(item, 'LICENSE-anime-crosswalk.txt'));
   await copyFile('node_modules/hls.js/LICENSE', path.join(item, 'LICENSE-hls.js.txt'));
   await copyFile('docs/playlist.example.json', path.join(item, 'playlist.example.json'));
   await copyFile('docs/playlist-original.example.json', path.join(item, 'playlist-original.example.json'));
   await copyFile('docs/viewing-0.6.md', path.join(item, 'Просмотр-и-субтитры.md'));
   await copyFile('docs/redesign-0.7.md', path.join(item, 'Оформление-и-проверки.md'));
   await copyFile('docs/character-details.md', path.join(item, 'Имена-и-заметки.md'));
-  await copyFile('docs/cinema-0.9.0.md', path.join(item, 'Проверка-перед-публикацией.md'));
+  await copyFile('docs/anime-automatic-0.9.1.md', path.join(item, 'Проверка-перед-публикацией.md'));
   await copyFile('node_modules/video.js/LICENSE', path.join(item, 'LICENSE-video.js.txt'));
   await copyFile('node_modules/libass-wasm/dist/js/COPYRIGHT', path.join(item, 'LICENSE-libass-wasm.txt'));
   await writeFile(path.join(item, 'ПРОЧИТАЙ.txt'), `\uFEFFYORU ${version}
@@ -37,6 +38,8 @@ for (const item of output) {
 
 Прямой просмотр Internet Archive появляется только при подтверждённом файле, языке и указанной свободной лицензии. Резервные адреса относятся к тому же файлу и качеству. Сохраняется позиция встроенного просмотра. В настройках можно проверить доступ к публичным страницам сервисов; это не проверка наличия фильма. Проверки новых сервисов из РФ и других стран не подтверждены.
 
+Для аниме AniLibria автоматически подбираются другие плееры и озвучки Yummyani, если найдено точное соответствие релиза. Реальные названия команд берутся из API. Выбирай оригинал и варианты перевода под видео. Онлайн-плеер открывается внутри Yoru; качество и оформление его субтитров выбираются в самом плеере. Позиция Kodik сохраняется только по подтверждённым сообщениям. Доступность каждого перевода и 1080p не гарантируется.
+
 Если постер Yummyani не загрузился, резервная обложка проверяется по точным идентификаторам релиза в AniLibria или MyAnimeList. По одному похожему названию обложки не подставляются; при противоречии идентификаторов остаётся заглушка.
 
 В настройках есть готовые темы, своя палитра, режимы производительности и качества. Подробные параметры и ручной импорт находятся во вкладке «Дополнительно».
@@ -47,7 +50,7 @@ for (const item of output) {
 
 Сохраняются два движка, прямые MP4/WebM/HLS, варианты перевода и оформленные субтитры. Автовосстановление требует подходящего резервного источника; полный отказ сети или сервиса не позволяет гарантировать непрерывный просмотр. Проверки из РФ и звук Discord на пользовательском ПК не подтверждены. Для Discord выбирай нужное окно приложения с передачей звука.
 
-Персонажи, свои имена и заметки настраиваются отдельно для каждого аниме. Для HTTP API AniDB нужен зарегистрированный клиент. Автоматический полный состав каждой серии не подтверждён.
+Персонажи каталога автоматически подбираются по точной связи с AniDB и загружаются с публичной страницы релиза, вместе с фотографиями. Свои имена и заметки сохраняются отдельно. При недоступности AniDB остаётся кэш и повтор. Полный состав по каждой серии не подтверждён; для дополнительного ручного HTTP API по-прежнему нужен зарегистрированный клиент. Индекс ID основан на anime-offline-database, ODbL/DbCL; лицензия включена в поставку.
 
 Результаты Windows-проверки и актуальные установщики находятся в GitHub Actions репозитория Duwkaf1/kinoteatr-xivivide. Подробности — в «Проверка-перед-публикацией.md».
 `, 'utf8');

@@ -1,0 +1,11 @@
+{
+  "source": "https://github.com/manami-project/anime-offline-database/releases/tag/2026-27",
+  "asset": "anime-offline-database-minified.json.zst",
+  "assetSha256": "5672cef0fd729a7f7810fc9cf7d54007612aee83fbcf44dd370359c82db6373a",
+  "inputSha256": "395be786fb2f98f1fca9e963911b9332110098a080e7e2569902bbc5641d1a41",
+  "upstreamLastUpdate": "2026-07-04",
+  "outputSha256": "f4345c5dcde6c9ef3bb675130b6da6062be54518e4c189775aee242378a267e5",
+  "entries": 13656,
+  "license": "ODbL-1.0 / DbCL-1.0",
+  "transform": "Unique exact MAL and AniDB source IDs, year, episode count, canonical title and synonyms. No approximate title matching."
+}

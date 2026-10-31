@@ -5,7 +5,7 @@ import { languageName, subtitleKind } from './media-labels.js';
 import { subtitleCredit } from './subtitle-credit.js';
 import { validateSubtitleSelection } from './watching.js';
 
-export function viewingControls({ $, node, preferences, persist, savePreferences, toast, active, video, hls, currentSource, restart }) {
+export function viewingControls({ $, node, preferences, persist, savePreferences, toast, active, video, hls, currentSource, restart, online = () => null }) {
   let controller; let detach = () => {};
   const option = (value, text) => { const element = node('option', text); element.value = value; return element; };
   $('#open-player-settings').onclick = () => $('#player-settings-dialog').showModal();
@@ -18,10 +18,12 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     const value = active(); if (!value) return;
     const choices = rankSources(value.episode.sources, value.quality, { ...value.recovery, ...value.watching });
     $('#source-player').replaceChildren(...choices.map((source, index) => option(source.id, `${source.label || (source.audioType === 'original' ? `Источник ${index + 1}` : source.voice)}${!['ru', 'ja'].includes(source.language) ? ` · ${languageName(source.language)}` : ''}`)));
-    if (!choices.length) $('#source-player').append(option('', value.episode.webPlayers?.length ? 'Выбери плеер сайта…' : 'Нет подходящих источников'));
+    if (!choices.length) {const empty=option('',value.episode.webPlayers?.length?'Выбери плеер сайта…':'Нет подходящих источников');empty.disabled=true;$('#source-player').append(empty);}
     for (const page of value.episode.webPlayers || []) $('#source-player').append(option(`web:${page.id}`, `${page.label} · окно сайта`));
-    $('#source-player').value = currentSource()?.id || choices[0]?.id || '';
-    $('#source-player').disabled = !choices.length && !value.episode.webPlayers?.length;
+    for(const player of online()?.players()||[])if(player.audioType===value.watching.audioMode)$('#source-player').append(option(`online:${player.id}`,`${player.voice} · ${player.player}${player.quality?` · до ${player.quality}p`:""}`));
+    $('#source-player').value = online()?.current()?`online:${online().current().id}`:currentSource()?.id || choices[0]?.id || '';
+    $('#quick-source').replaceChildren(...[...$('#source-player').options].map(item=>item.cloneNode(true)));$('#quick-source').value=$('#source-player').value;
+    $('#source-player').disabled = !choices.length && !value.episode.webPlayers?.length && !(online()?.players()||[]).some(p=>p.audioType===value.watching.audioMode);$('#quick-source').disabled=$('#source-player').disabled;$('#quick-source').closest('label').hidden=[...$('#source-player').options].filter(o=>o.value).length<2;
   }
   function tracks() {
     const value = active(); const source = currentSource();
@@ -32,6 +34,7 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     return [...external, ...embedded].filter(track => preferences.watching.subtitleFormat === 'all' || track.format === preferences.watching.subtitleFormat);
   }
   function selectTrack() {
+    if($('#subtitle-selector').value.startsWith('online:')){online()?.select($('#subtitle-selector').value.slice(7));return;}
     const selected = tracks().find(track => track.id === $('#subtitle-selector').value);
     const authored = ['ass', 'ssa'].includes(selected?.format);
     $('#subtitle-size').disabled = authored; $('#subtitle-background').disabled = authored;
@@ -47,18 +50,23 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     } else controller.select(selected, preferences.watching, preferences.profile === 'economy');
   }
   function subtitles() {
+    const external=online()?.current();const webTracks=(online()?.players()||[]).filter(p=>p.subtitles);
+    if(external){for(const selector of ['#subtitle-format','#subtitle-size','#subtitle-background','#subtitle-delay'])$(selector).disabled=true;$('#subtitle-selector').replaceChildren(...(external.subtitles?[]:[option('off','Перевод в плеере')]),...webTracks.map(p=>option(`online:${p.id}`,`${p.voice} · ${p.player}`)));$('#subtitle-selector').value=external.subtitles?`online:${external.id}`:'off';report(external.subtitles?`${external.voice} · оформление выбирается внутри плеера`:'Субтитры управляются выбранным плеером.');return;}
+    $('#subtitle-format').disabled=false;
     const choices = tracks(); const preferred = preferences.watching.subtitleVariant;
     const saved = preferences.watching.subtitleSelection; const value = active();
     const exact = saved && saved.titleId === value?.title.id && saved.episodeId === value?.episode.id && (!saved.sourceId || saved.sourceId === currentSource()?.id) ? choices.find(track => track.id === saved.trackId) : null;
     const chosen = preferred === 'off' ? null : exact || choices.find(track => track.label === preferred) || (value?.watching.audioMode === 'original' ? choices.find(track => track.language === preferences.watching.subtitleLanguage) : null);
     $('#subtitle-selector').replaceChildren(option('off', 'Без субтитров'), ...choices.map(track => option(track.id, `${track.label}${track.language !== 'ru' ? ` · ${languageName(track.language)}` : ''}${choices.filter(item => item.label === track.label).length > 1 ? ` · ${subtitleKind(track.format)}` : ''}`)));
+    for(const player of webTracks)$('#subtitle-selector').append(option(`online:${player.id}`,`${player.voice} · ${player.player}${player.quality?` · до ${player.quality}p`:""}`));
     $('#subtitle-selector').value = chosen?.id || 'off'; selectTrack();
     if (!controller && active()?.episode.webPlayers?.length) report('Перевод сайта выбирается в его отдельном окне.');
     else if (!choices.length && active()?.watching.audioMode === 'original') report('Нет подходящего перевода. Добавь его в параметрах просмотра.');
     else if (!controller) report('Субтитры выключены.');
   }
-  $('#source-player').onchange = async () => {
-    const value = $('#source-player').value;
+  const changeSource = async event => {
+    const value = event.target.value;if(value.startsWith('online:')){online()?.select(value.slice(7));$('#player-settings-dialog').close();return;}
+    online()?.useNative();
     if (!value.startsWith('web:')) { if (value) restart(value); return; }
     const page = active()?.episode.webPlayers?.find(item => `web:${item.id}` === value); if (!page) return;
     $('#player-settings-dialog').close();
@@ -69,7 +77,9 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
       toast('Плеер сайта открыт отдельно. Перевод, серии и субтитры выбираются в его окне.');
     } catch { toast('Не удалось открыть плеер сайта.'); }
   };
+  $('#source-player').onchange=changeSource;$('#quick-source').onchange=changeSource;
   $('#subtitle-selector').onchange = () => {
+    if($('#subtitle-selector').value.startsWith('online:')){online()?.select($('#subtitle-selector').value.slice(7));return;}
     rememberTrack(tracks().find(track => track.id === $('#subtitle-selector').value));
     savePreferences(); selectTrack();
   };

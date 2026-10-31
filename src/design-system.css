@@ -473,3 +473,11 @@ body[data-profile="quality"] .primary { box-shadow: inset 0 1px 0 #ffffff24, 0 4
   .primary, .quiet, .switch, .theme-choice, .character-note, .artwork { border: 1px solid ButtonText; }.switch:checked { background: Highlight; }.switch:checked:after { background: HighlightText; }
   .theme-choice:has(input:checked) { outline: 2px solid Highlight; }.artwork-play { opacity: 1; background: Canvas; color: CanvasText; }
 }
+
+/* Source choice stays next to playback instead of behind manual import. */
+.player-controls:has(.source-select:not([hidden])) { grid-template-columns:125px 85px minmax(150px,1fr) minmax(150px,1fr) 36px auto; }
+.player-controls .source-select { grid-column:auto;grid-row:auto; }
+.online-feedback { color:var(--muted);font-size:11px;line-height:1.5;margin:6px 0; }
+.online-player { display:block;width:100%;aspect-ratio:16/9;height:100%;min-height:0;border:0;background:#000;border-radius:inherit; }
+@media(max-width:900px) { .player-controls:has(.source-select:not([hidden])) { grid-template-columns:minmax(90px,1fr) 80px 36px auto; }.player-controls .subtitle-select { order:1;grid-row:2;grid-column:1 / -1; }.player-controls .source-select { order:2;grid-row:3;grid-column:1 / -1; } }
+@media(max-width:540px) { .player-controls:has(.source-select:not([hidden])) { grid-template-columns:minmax(0,1fr) 70px 36px; } }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: https:; media-src https: blob:; connect-src 'self' https: blob:; worker-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: https:; media-src https: blob:; connect-src 'self' https: blob:; worker-src 'self' blob:; object-src 'none'; frame-src https://old.yummyani.me https://ru.yummyani.me https://site.yummyani.me https://video.sibnet.ru https://kodik.info https://kodik.cc https://kodik.biz https://kodik.video https://kodik.online https://kodikplayer.com https://kodikplayer.net https://aniqit.com https://aniqit.net https://aniqit.ru; base-uri 'self'; form-action 'none'">
     <title>Yoru — кино и аниме</title>
     <link rel="icon" type="image/png" href="/yoru-icon.png">
     <link rel="preload" href="/fonts/Nunito-Variable.ttf" as="font" type="font/ttf" crossorigin>
@@ -135,17 +135,19 @@
         <div class="player-controls">
           <label>Озвучка<select id="watch-audio-mode" data-settings-group="watching" data-setting="audioMode"><option value="dub">Русская</option><option value="original">Оригинал</option></select></label>
           <label>Качество<select id="quality"><option value="1080">1080p</option><option value="720">720p</option><option value="480">480p</option></select></label>
+          <label class="source-select">Плеер и озвучка<select id="quick-source"></select></label>
           <label class="subtitle-select">Перевод<select id="subtitle-selector"><option value="off">Без субтитров</option></select></label>
           <button id="open-player-settings" type="button" class="icon-button" aria-label="Параметры просмотра" aria-haspopup="dialog" aria-controls="player-settings-dialog" title="Параметры просмотра"><span data-icon="settings"></span></button>
           <button id="next-button" class="primary" aria-label="Следующая серия →">Далее <span data-icon="arrow"></span></button>
         </div>
         <div class="player-status-line"><p id="playback-status" role="status" aria-live="polite"></p><button id="retry-button" class="quiet" hidden>Повторить</button></div>
+        <p id="online-status" class="online-feedback" role="status" hidden></p><button id="retry-online" type="button" class="quiet" hidden>Повторить подбор</button>
         <p id="subtitle-status" class="subtitle-feedback" role="status">Субтитры выключены.</p>
         <div class="player-more">
           <details id="episode-picker" class="player-drawer"><summary>Серии</summary><div id="episode-list" class="episodes"></div></details>
         <details id="cast-panel" class="settings-card player-drawer"><summary>Персонажи</summary>
           <div class="cast-simple-heading"><p id="cast-context" class="cast-context"></p><div class="cast-simple-actions"><label id="cast-season-label">Сезон<select id="cast-season"></select></label><button id="open-cast-settings" class="quiet" type="button" aria-label="Настройки персонажей" aria-haspopup="dialog" aria-controls="cast-settings-dialog"><span data-icon="settings"></span><span id="cast-settings-label">Настроить</span></button></div></div>
-          <p id="cast-status" role="status" class="cast-caption"></p><div id="cast-list"></div>
+          <p id="cast-status" role="status" class="cast-caption"></p><button id="retry-auto-cast" type="button" class="quiet" hidden>Повторить загрузку персонажей</button><div id="cast-list"></div>
         </details>
         <details class="info-box player-drawer"><summary>Демонстрация в Discord</summary><p>В установленном Discord выбери демонстрацию окна «Yoru» и включи передачу звука. Плеер использует обычный аудиовыход Windows. Не транслируй весь экран, если нужен только звук приложения.</p><p>Захват звука и изображения ещё нужно проверить на Windows. При проблемах с аппаратным ускорением запусти приложение с параметром --disable-gpu.</p></details>
         </div>

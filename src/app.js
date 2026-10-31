@@ -1,3 +1,4 @@
+import {onlinePlayback} from './online-playback.js';
 import { PlaybackPlan, validateLibrary, httpsURL, MAX_LIBRARY_TITLES, voiceKey } from './core.js';
 import { loadState, saveState, savePlaybackState } from './storage.js';
 import { icon, decorateIcons } from './icons.js';
@@ -35,7 +36,7 @@ const pageSize = () => profileConfig(preferences.profile, preferences.manual).pa
 let visibleCount = pageSize();
 let searchTimer;
 let hlsModule;
-let viewing; let casts;
+let viewing; let casts;let online;
 let overviewPosters = '';
 let settingsUI;
 let discovery;
@@ -138,7 +139,8 @@ for (const input of document.querySelectorAll('[data-settings-group]')) {
     if (group === 'manual') visibleCount = pageSize();
     applyPreferences(); storePreferences();
     if (group === 'watching') {
-      if (['audioMode', 'engine'].includes(key)) restartSource();
+      if(key==='audioMode'&&active){active.watching.audioMode=preferences.watching.audioMode;if(!online?.chooseAudio(preferences.watching.audioMode))restartSource();}
+      else if(key==='engine'&&!online?.current())restartSource();
       else viewing?.subtitles();
     }
     if (group === 'manual' || group === 'interface') renderLibrary();
@@ -173,6 +175,7 @@ function persist(playbackOnly = false) {
 }
 function status(message) { $('#playback-status').textContent = message; }
 function recordProgress(force = false) {
+  const external=online?.time();if(active&&Number.isFinite(external)&&(force||Date.now()-lastSave>3000)){lastSave=Date.now();state.progress[active.title.id]={episodeId:active.episode.id,time:external,updatedAt:Date.now()};persist(true);return;}
   if (!active || !video || !Number.isFinite(video.currentTime) || (!force && Date.now() - lastSave < 3000)) return;
   lastSave = Date.now();
   const time = video.currentTime > 0 ? video.currentTime : resumeAt;
@@ -427,6 +430,7 @@ $('#import-file').onchange = async event => {
 };
 
 function stopMedia() {
+  online?.stop();
   loading.hide();
   generation++;
   // libass needs the video parent while removing its canvas. Dispose subtitles
@@ -458,7 +462,7 @@ function openTitle(title) {
   startEpisode(title, episode, progress?.time ?? 0);
 }
 function startEpisode(title, episode, time, session = {}) {
-  recordProgress(true); stopMedia(); active = { title, episode, quality: session.quality ?? state.quality, config: profileConfig(preferences.profile, preferences.manual), recovery: { ...preferences.playback }, watching: { ...preferences.watching, ...(session.audioMode ? { audioMode: session.audioMode } : {}) }, session: { paused: false, muted: false, volume: preferences.playback.volume / 100, rate: preferences.playback.speed, ...session } };
+  recordProgress(true); stopMedia();$('#quality option[value="provider"]')?.remove();$('#quality').disabled=false;$('#player-engine').disabled=false; active = { title, episode, checkpoint:time, quality: session.quality ?? state.quality, config: profileConfig(preferences.profile, preferences.manual), recovery: { ...preferences.playback }, watching: { ...preferences.watching, ...(session.audioMode ? { audioMode: session.audioMode } : {}) }, session: { paused: false, muted: false, volume: preferences.playback.volume / 100, rate: preferences.playback.speed, ...session } };
   active.watching.originalLanguage = episodeOriginalLanguage(episode, active.quality, session.preferredSourceId);
   resumeAt = time; plan = new PlaybackPlan(episode.sources, active.quality, { ...active.recovery, ...active.watching, preferredSourceId: session.preferredSourceId });
   $('#player-section').hidden = false;
@@ -473,12 +477,12 @@ function startEpisode(title, episode, time, session = {}) {
   reveal($('#player-section'));
   $('#player-section').scrollIntoView({ behavior: motionEnabled() ? 'smooth' : 'instant', block: 'start' });
   startSource();
-  $('#cast-panel').hidden=Boolean(title.discovery);if(!title.discovery)casts?.episodeChanged();
+  $('#cast-panel').hidden=Boolean(title.discovery);if(!title.discovery)casts?.episodeChanged();online?.load();refreshOnlineControls();
 }
 function restartSource(preferredSourceId = plan?.current?.id, quality = active?.quality) {
   if (!active) return;
   const session = video ? { paused: active.session.paused, muted: video.muted, volume: video.volume, rate: video.playbackRate, preferredSourceId, quality } : { ...active.session, preferredSourceId, quality };
-  startEpisode(active.title, active.episode, video?.currentTime || resumeAt, session);
+  session.audioMode=active.watching.audioMode;startEpisode(active.title, active.episode, video?.currentTime || resumeAt, session);
 }
 function nextEpisode() {
   if (!active) return;
@@ -630,14 +634,19 @@ document.addEventListener('keydown', event => {
     if (key === 'arrowright') video.currentTime = Math.min(Number.isFinite(video.duration) ? video.duration : video.currentTime + preferences.playback.seekSeconds, video.currentTime + preferences.playback.seekSeconds);
   }
 });
-$('#close-player').onclick = () => { recordProgress(true); stopMedia(); setFocusMode(false); active = null; plan = null; $('#player-section').hidden = true; $('#return-player').hidden = true; if (view === 'watch') changeView('catalog'); else renderLibrary(); $('#view-title').focus({ preventScroll: true }); };
+$('#close-player').onclick = () => { recordProgress(true); stopMedia(); setFocusMode(false); active = null; plan = null;online?.cancel(); $('#player-section').hidden = true; $('#return-player').hidden = true; if (view === 'watch') changeView('catalog'); else renderLibrary(); $('#view-title').focus({ preventScroll: true }); };
 $('#next-button').onclick = nextEpisode;
 $('#retry-button').onclick = () => { if (active?.title.catalog) discovery.playSaved(active.title, { episodeId: active.episode.id }); else if (active) startEpisode(active.title, active.episode, resumeAt); };
 $('#quality').onchange = event => { state.quality = Number(event.target.value); persist(true); restartSource(undefined, state.quality); applyPreferences(); };
 window.addEventListener('beforeunload', () => recordProgress(true));
 window.addEventListener('offline', () => toast('Нет соединения. При недоступности всех источников просмотр приостановится.'));
 window.addEventListener('online', () => { toast('Соединение восстановлено.'); if (active && !plan?.current) startEpisode(active.title, active.episode, resumeAt); });
-viewing = viewingControls({ $, node, preferences, persist, savePreferences: storePreferences, toast, active: () => active, video: () => video, hls: () => hls, currentSource: () => plan?.current, restart: restartSource });
+viewing = viewingControls({ $, node, preferences, persist, savePreferences: storePreferences, toast, active: () => active, video: () => video, hls: () => hls, currentSource: () => plan?.current, restart: restartSource,online:()=>online });
+function refreshOnlineControls(){
+ if(!active)return;for(const option of $('#watch-audio-mode').options)option.disabled=!active.episode.sources.some(source=>option.value==='original'?source.audioType==='original':source.audioType!=='original'&&source.language==='ru')&&!(online?.players()||[]).some(player=>player.audioType===option.value);
+ viewing?.sources();viewing?.subtitles();
+}
+online=onlinePlayback({$,node,active:()=>active,video:()=>video,persist,enter(){recordProgress(true);if(video)resumeAt=video.currentTime||resumeAt;stopMedia();active.checkpoint=resumeAt;},refresh:refreshOnlineControls,status,onTime(time){if(!active)return;resumeAt=time;active.checkpoint=time;if(Date.now()-lastSave>3000){state.progress[active.title.id]={episodeId:active.episode.id,time,updatedAt:Date.now()};lastSave=Date.now();persist(true);}},onEnded(){if(preferences.autoNext)nextEpisode();else status('Серия закончилась.');}});
 casts = castPanel({ $, node, active: () => active, persist, toast });
 function retainCatalogTitle(title) {
   const index = state.titles.findIndex(item => item.id === title.id);

@@ -9,6 +9,7 @@ function catalogGateway() {
     if (args.genres !== undefined) { try { args.genres = JSON.parse(args.genres); } catch { args.genres = null; } }
     if (args.page !== undefined) args.page = Number(args.page);
     if (args.releaseId !== undefined) args.releaseId = Number(args.releaseId);
+    if (args.number !== undefined) args.number = Number(args.number);
     const controller = new AbortController(); response.on('close', () => { if (!response.writableEnded) controller.abort(); });
     try {
       const result = await requestCatalog(args, { signal: controller.signal });

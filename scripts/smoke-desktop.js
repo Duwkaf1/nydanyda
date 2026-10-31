@@ -1,3 +1,4 @@
+import {smokeAutomatic} from './smoke-automatic.js';
 import { _electron as electron } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
@@ -241,6 +242,7 @@ try {
   assert.equal(await sourcePage.evaluate(() => typeof window.kadr), 'undefined');
   assert.equal(await sourcePage.evaluate(() => typeof window.require), 'undefined');
   await smokeCatalog({application,page,root});
+  await smokeAutomatic({application,page,root});
   await smokeCinema({application,page,root});
   assert.deepEqual(errors, []);
   const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));

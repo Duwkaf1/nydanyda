@@ -1,10 +1,12 @@
+import {discoveryRequest} from './discovery-transport.js';
+import {parseAniDBPage} from './anime-online.js';
 import { parseAniDB, readCastCache, saveCastCache, castForEpisode, anidbPage, anidbReleaseId, characterRole } from './anidb.js';
 import { mergeCastPhotos, validateCharacterPhoto } from './character-photos.js';
 import { characterPhotoPicker } from './character-photo-picker.js';
 import { icon } from './icons.js';
 import { characterDetailsEditor } from './character-details-editor.js';
 export function castPanel({ $, node, active, persist, toast }) {
-  let cache = readCastCache(); let serial = 0;
+  let cache = readCastCache(); let serial = 0;let autoRequest,autoKey='',autoSequence=0,rateRetries=0,retryTimer;const autoMessages=new Map();
   const details = characterDetailsEditor({ $, node, changed: () => render() });
   const photos = characterPhotoPicker({ $, node, save: (releaseId, characterId, photo) => {
     const data = cache[releaseId]; const character = data?.characters.find(item => item.id === characterId);
@@ -30,9 +32,10 @@ export function castPanel({ $, node, active, persist, toast }) {
     const episode = known ? data.episodes.find(item => item.number === String(value.episode.number)) : null;
     $('#anidb-episode').disabled = !episode?.id || season() !== (value.episode.season || 1);
     $('#save-episode-cast').disabled = !known || season() !== (value.episode.season || 1);
-    $('#cast-settings-label').textContent = known ? 'Настроить' : 'Добавить персонажей';
+    $('#cast-settings-label').textContent = known || value.title.catalog ? 'Настроить' : 'Добавить персонажей';
+    $('#retry-auto-cast').hidden=!value.title.catalog||!autoMessages.has(value.title.id);
     $('#cast-episode-settings').hidden = !known;
-    if (!known) { $('#cast-status').textContent = 'Персонажей пока нет. Список можно добавить в настройках.'; return; }
+    if (!known) { $('#cast-status').textContent = value.title.catalog ? autoMessages.get(value.title.id)||'Автоматически загружаем персонажей из AniDB…' : 'Персонажей пока нет. Список можно добавить в настройках.'; return; }
     const perEpisode = $('#cast-scope').value === 'episode';
     const characters = perEpisode ? castForEpisode(data, value.episode.number) : data.characters;
     $('#cast-status').textContent = perEpisode ? characters === null ? 'Для этой серии данные ещё не отмечены.' : `Серия ${value.episode.number} · отмечено вручную: ${characters.length}` : `Персонажей: ${characters.length} · имена и заметки можно менять`;
@@ -71,8 +74,20 @@ export function castPanel({ $, node, active, persist, toast }) {
     const value = active(); if (!value) return;
     const numbers = [...new Set([1, ...value.title.episodes.map(ep => ep.season || 1), ...(value.title.seasons || []).map(item => item.number)])].sort((a, b) => a - b);
     $('#cast-season').replaceChildren(...numbers.map(number => { const option = node('option', value.title.seasons?.find(s => s.number === number)?.title || `Сезон ${number}`); option.value = number; return option; }));
-    $('#cast-season').value = value.episode.season || 1; render();
+    $('#cast-season').value = value.episode.season || 1; render();ensureAutomatic();
   }
+  async function ensureAutomatic(force=false){
+    const value=active();if(!value?.title.catalog){clearTimeout(retryTimer);autoRequest?.abort();autoSequence++;autoRequest=null;return;}const key=`${value.title.id}:${season()}`;
+    if(!force&&((autoKey===key&&autoRequest)||cache[id()]&&Date.now()-cache[id()].updatedAt<86400000))return;
+    clearTimeout(retryTimer);if(autoKey!==key)rateRetries=0;autoRequest?.abort();autoRequest=new AbortController();autoKey=key;const token=++autoSequence;const titleId=value.title.id;autoMessages.delete(titleId);$('#retry-auto-cast').hidden=true;
+    try{
+      const result=await discoveryRequest({kind:'anime-cast',releaseId:value.title.catalog.releaseId},{signal:autoRequest.signal});if(token!==autoSequence||active()?.title.id!==titleId)return;
+      const current=active();if(mapping()?.anidbId&&mapping().anidbId!==result.id)throw new Error('Для этого сезона сохранена собственная страница AniDB. Автоматически её не меняем.');
+      const data=parseAniDBPage(result.html,result.id);current.title.anidbId=result.id;save(mergeCastPhotos(data,cache[result.id]));persist();autoMessages.delete(titleId);render();
+    }catch(error){if(token===autoSequence&&!autoRequest.signal.aborted&&active()?.title.id===titleId){autoMessages.set(titleId,error.message||'Не удалось загрузить персонажей.');render();if(/подождать перед следующей/.test(error.message)&&rateRetries++<1)retryTimer=setTimeout(()=>{if(active()?.title.id===titleId)ensureAutomatic(true);},5100);}}
+    finally{if(token===autoSequence)autoRequest=null;}
+  }
+  $('#retry-auto-cast').onclick=()=>ensureAutomatic(true);
   $('#cast-season').onchange = () => { if (season() !== (active()?.episode.season || 1)) $('#cast-scope').value = 'season'; render(); }; $('#cast-scope').onchange = () => {
     if ($('#cast-scope').value === 'episode') $('#cast-season').value = active()?.episode.season || 1;
     render();

@@ -30,7 +30,7 @@ export function savePlaybackState(state, storage = localStorage) { storage.setIt
 export function saveState(state, storage = localStorage) {
   // Catalog media URLs expire. Store episode identities and personal additions,
   // then fetch fresh streams automatically when opening the anime again.
-  const titles = state.titles.map(title => title.catalog ? { ...title, episodes: title.episodes.map(ep => ({ ...ep, sources: ep.sources.filter(source => !source.id.startsWith('catalog:anilibria:')) })) } : title);
+  const titles = state.titles.map(title => title.catalog ? { ...title, episodes: title.episodes.map(ep => ({ ...ep, onlinePlayers:undefined, sources: ep.sources.filter(source => !source.id.startsWith('catalog:anilibria:')) })) } : title);
   storage.setItem(KEY, JSON.stringify({ ...state, titles }));
   savePlaybackState(state, storage);
 }

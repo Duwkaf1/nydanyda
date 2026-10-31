@@ -1,0 +1,18 @@
+{
+  "provider": "AniLibria/AniLiberty",
+  "endpoint": "https://aniliberty.top/api/v1/anime/releases/5152",
+  "responseWasLive": true,
+  "releaseId": 5152,
+  "alias": "black-clover-special",
+  "title": "Чёрный Клевер (Спэшл)",
+  "year": 2016,
+  "episodes": 1,
+  "qualitiesPresent": [720, 480],
+  "hls1080": null,
+  "providerMalId": 39864,
+  "providerMalIdDescribesAnotherRelease": true,
+  "reviewedIdentity": {"malId": 33950, "anidbId": 12351, "title": "Black Clover: Jump Festa 2016 Special"},
+  "identityReference": "https://github.com/manami-project/anime-offline-database/releases/tag/2026-27",
+  "alternativeVideosAndLiveAniDBCastVerified": false,
+  "blockedBy": "Cloud proxy CONNECT 403; network draft requires publication"
+}

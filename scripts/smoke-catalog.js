@@ -9,6 +9,8 @@ export async function smokeCatalog({ application, page, root }) {
   await application.evaluate(({net},release)=>{
     const previous=net.fetch;globalThis.__catalogRequests=[];
     net.fetch=async(url,options)=>{
+      if((String(url).startsWith('https://old.yummyani.me/api/')||String(url).startsWith('https://api.yani.tv/')))return new Response(JSON.stringify({response:[]}));
+      if(String(url).startsWith('https://anidb.net/anime/'))return new Response('Controlled unavailable',{status:503});
       if(!/^https:\/\/(anilibria|aniliberty)\.top\/api\/v1\/anime\//.test(url))return previous(url,options);
       globalThis.__catalogRequests.push(url);
       if(options.credentials!=='omit'||options.redirect!=='error')throw new Error('Unsafe catalog transport options');
@@ -37,7 +39,7 @@ export async function smokeCatalog({ application, page, root }) {
   const requests=await application.evaluate(()=>globalThis.__catalogRequests);assert.ok(requests.filter(url=>url.includes('/releases/9542')).length>=2);
   await page.getByRole('button',{name:'Закрыть плеер',exact:true}).click();
   const yummy=JSON.parse(await readFile(path.join(root,'test/fixtures/catalog/yummy.json'),'utf8'));
-  await application.evaluate(({net},fixture)=>{const previous=net.fetch;net.fetch=(url,options)=>String(url).startsWith('https://old.yummyani.me/api/')?Promise.resolve(new Response(JSON.stringify({response:/\/api\/anime\/\d+$/.test(new URL(url).pathname)?fixture:[fixture]}),{headers:{'Content-Type':'application/json'}})):previous(url,options);},yummy);
+  await application.evaluate(({net},fixture)=>{const previous=net.fetch;net.fetch=(url,options)=>(String(url).startsWith('https://old.yummyani.me/api/')||String(url).startsWith('https://api.yani.tv/'))?Promise.resolve(new Response(JSON.stringify({response:/\/api\/anime\/\d+$/.test(new URL(url).pathname)?fixture:[fixture]}),{headers:{'Content-Type':'application/json'}})):previous(url,options);},yummy);
   const websiteURL='https://old.yummyani.me/catalog/item/'+yummy.anime_url;await page.context().route(websiteURL,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Yummyani isolated catalog handoff fixture</title><h1>Yummyani</h1>'}));
   await page.context().route('https://static.yani.tv/**',route=>route.abort());
   const availability=await page.evaluate(()=>window.kadr.uninstallStatus());assert.equal(availability.available,false,'An isolated smoke profile cannot delete an installation');
