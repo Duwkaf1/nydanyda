@@ -20,8 +20,9 @@ export function yummyPlayers(raw,number){
  for(const entry of raw.response.slice(0,20000)){
   if(Number(entry.number)!==number||!Number.isSafeInteger(entry.video_id||entry.id))continue;
   let data=entry.data;try{if(typeof data==='string')data=JSON.parse(data);}catch{continue;}
-  if(!data||typeof data.dubbing!=='string'||!data.dubbing.trim()||typeof data.player!=='string'||!data.player.trim())continue;
-  const voice=data.dubbing.trim().slice(0,120);const subtitles=/субтитр|subtitles|\bsubs?\b/i.test(voice);const original=subtitles||/оригинал|original|японск|\braw\b/i.test(voice);
+  const label=typeof data?.dubbing==='string'?data.dubbing:typeof data?.translation==='string'?data.translation:data?.translation?.title;
+  if(!data||typeof label!=='string'||!label.trim()||typeof data.player!=='string'||!data.player.trim())continue;
+  const voice=label.trim().slice(0,120);const kind=String(data.translation_type||data.dubbing_type||data.translation?.type||'');const subtitles=data.is_subtitles===true||entry.is_subtitles===true||/субтитр|сабы|subtitles|\bsubs?\b/i.test(`${voice} ${kind}`);const original=subtitles||/оригинал|original|японск|\braw\b/i.test(`${voice} ${kind}`);
   // A non-Russian dub is never advertised as a Russian voice.
   if(/английск|украинск|english|україн/i.test(voice))continue;
   try{const url=animeEmbedURL(entry.iframe_url||entry.player_url||entry.url||data.iframe_url);const id=`yummy:${entry.video_id||entry.id}`;if(ids.has(id))continue;ids.add(id);const quality=String(entry.quality||'').match(/^(480|720|1080)p?$/)?.[1];result.push({id,url,voice,player:data.player.trim().slice(0,80),audioType:original?'original':'dub',subtitles,quality:quality?Number(quality):null});}catch{/* Unsupported hosts remain unavailable, never guessed. */}
@@ -43,4 +44,16 @@ export function parseAniDBPage(html,expectedId,Parser=DOMParser){
  }
  if(!characters.length)throw new Error('AniDB не вернул список персонажей. Возможно, сайт ограничил запрос.');
  return {id:expectedId,title:document.querySelector('h1')?.textContent.trim().slice(0,200)||'',characters,episodes:[],updatedAt:Date.now()};
+}
+
+export const managedPlayer = player => /^(?:kodik(?:player)?\.(?:info|cc|biz|video|online|com|net)|aniqit\.(?:com|net|ru))$/.test(new URL(player.url).hostname);
+
+export function parseJikanCast(raw,expectedId){
+ if(!Number.isSafeInteger(expectedId)||expectedId<1||!Number.isSafeInteger(raw?.malId)||!Array.isArray(raw.characters))throw new Error('Резервный каталог не подтвердил персонажей.');
+ const seen=new Set();const characters=raw.characters.slice(0,500).flatMap(entry=>{
+  const character=entry?.character;if(!Number.isSafeInteger(character?.mal_id)||character.mal_id<1||character.mal_id>=1000000000||typeof character.name!=='string'||!character.name.trim()||seen.has(character.mal_id))return [];seen.add(character.mal_id);
+  let photo;try{const url=new URL(character.images?.jpg?.image_url||character.images?.webp?.image_url);if(url.protocol==='https:'&&url.hostname==='cdn.myanimelist.net'&&!url.port&&url.pathname.startsWith('/images/characters/'))photo={url:url.href,source:'MyAnimeList',id:character.mal_id};}catch{}
+  return [{id:1000000000+character.mal_id,name:character.name.slice(0,200),role:entry.role==='Main'?'main character in':entry.role==='Supporting'?'secondary cast in':'appears in',...(photo?{imageUrl:photo.url}:{}),actors:(entry.voice_actors||[]).filter(a=>a.language==='Japanese'&&typeof a.person?.name==='string').slice(0,20).map(a=>({name:a.person.name.slice(0,160),id:null}))}];
+ });if(!characters.length)throw new Error('Резервный каталог вернул пустой каст.');
+ return {id:expectedId,title:String(raw.title||'').slice(0,200),source:'MyAnimeList',characters,episodes:[],updatedAt:Date.now()};
 }

@@ -1,5 +1,5 @@
 import { animeId } from './media-schema.js';
-import { anidbImage, validateCharacterPhoto } from './character-photos.js';
+import { anidbImage, castImage, validateCharacterPhoto } from './character-photos.js';
 export function characterRole(role) {
   const known = { 'main character in': { label: 'Главный персонаж', rank: 0 }, 'secondary cast in': { label: 'Второстепенный персонаж', rank: 1 }, 'appears in': { label: 'Эпизодическая роль', rank: 2 } };
   return Object.hasOwn(known, role) ? known[role] : { label: 'Персонаж', rank: 3 };
@@ -46,7 +46,7 @@ export function readCastCache(storage = localStorage) {
       for (const [number, ids] of Object.entries(data.manualEpisodes || {})) if (/^\d{1,5}$/.test(number) && Array.isArray(ids)) manualEpisodes[number] = ids.filter(id => Number.isSafeInteger(id)).slice(0, 1000);
       const characters = data.characters.map(character => {
         const { photo, imageUrl, ...rest } = character;
-        const safePhoto = validateCharacterPhoto(photo); const safeImage = anidbImage(imageUrl);
+        const safePhoto = validateCharacterPhoto(photo); const safeImage = castImage(imageUrl);
         return { ...rest, ...(safePhoto ? { photo: safePhoto } : {}), ...(safeImage ? { imageUrl: safeImage } : {}), actors: character.actors.map(actor => { const { imageUrl, ...rest } = actor; const image = anidbImage(imageUrl); return { ...rest, ...(image ? { imageUrl: image } : {}) }; }) };
       });
       result[data.id] = { ...data, characters, manualEpisodes };

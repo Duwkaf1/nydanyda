@@ -81,7 +81,7 @@ function applyPreferences() {
   $('#animations-hint').textContent = preferences.profile === 'economy' ? 'В режиме «Производительность» эффекты отключены.' : reducedMotion.matches ? 'Эффекты отключены системной настройкой уменьшения движения.' : 'Учитывается системная настройка уменьшения движения.';
   $('#auto-next-setting').checked = preferences.autoNext;
   $('#default-quality').value = String(state.quality);
-  $('#quality').value = String(active?.quality ?? state.quality);
+  $('#quality').value = online?.current()?'provider':String(active?.quality ?? state.quality);
   $('#watch-audio-mode').value = active?.watching.audioMode ?? preferences.watching.audioMode;
   document.documentElement.style.setProperty('--subtitle-size', `${24 * preferences.watching.subtitleSize / 100}px`);
   document.documentElement.style.setProperty('--subtitle-bg', preferences.watching.subtitleBackground ? '#000b' : 'transparent');
@@ -448,7 +448,7 @@ function episodeButtons() {
     const button = node('button', `${active.title.episodes.some(item => item.season) ? `С${ep.season || 1} · ` : ''}Серия ${ep.number}`, `quiet${ep.id === active.episode.id ? ' selected' : ''}`);
     button.onclick = () => {
       if (active.title.catalog && Date.now() - (catalogFreshness.get(active.title.id) || 0) > 300000) discovery.playSaved(active.title, { episodeId: ep.id });
-      else startEpisode(active.title, ep, 0, active.title.catalog ? { quality: bestCatalogQuality(ep, state.quality), audioMode: 'dub' } : {});
+      else startEpisode(active.title, ep, 0, active.title.catalog ? { quality: bestCatalogQuality(ep, state.quality), audioMode: active.watching.audioMode } : {});
     };
     $('#episode-list').append(button);
   }
@@ -476,7 +476,7 @@ function startEpisode(title, episode, time, session = {}) {
   setFocusMode(preferences.interface.cinema);
   reveal($('#player-section'));
   $('#player-section').scrollIntoView({ behavior: motionEnabled() ? 'smooth' : 'instant', block: 'start' });
-  startSource();
+  if(episode.sources.length||title.catalog?.provider!=='yummyani')startSource();else status('Подключаем плеер внутри Yoru…');
   $('#cast-panel').hidden=Boolean(title.discovery);if(!title.discovery)casts?.episodeChanged();online?.load();refreshOnlineControls();
 }
 function restartSource(preferredSourceId = plan?.current?.id, quality = active?.quality) {
@@ -488,7 +488,7 @@ function nextEpisode() {
   if (!active) return;
   const next = active.title.episodes[active.title.episodes.indexOf(active.episode) + 1];
   if (next && active.title.catalog && Date.now() - (catalogFreshness.get(active.title.id) || 0) > 300000) discovery.playSaved(active.title, { episodeId: next.id });
-  else if (next) startEpisode(active.title, next, 0, active.title.catalog ? { quality: bestCatalogQuality(next, state.quality), audioMode: 'dub' } : {});
+  else if (next) startEpisode(active.title, next, 0, active.title.catalog ? { quality: bestCatalogQuality(next, state.quality), audioMode: active.watching.audioMode } : {});
   else status(active.title.discovery?.media==='movie'?'Фильм закончился.':'Все доступные серии просмотрены.');
 }
 

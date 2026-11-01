@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import {boundedText} from '../src/subtitles.js';
 import {yummyPlayers} from '../src/anime-online.js';
-const entries=new Map();let used=0,crosswalk;let lastAniDB=0,aniDBBusy=false;
+const entries=new Map();let used=0,crosswalk;let lastAniDB=0,aniDBQueue=Promise.resolve(),aniDBUnavailableUntil=0;
 const normalized=value=>String(value||'').normalize('NFKC').toLocaleLowerCase().replace(/ё/g,'е').replace(/[^\p{L}\p{N}]/gu,'');
 export async function resolveAnimeIdentity(raw){
  if(raw.id===5152&&raw.alias==='black-clover-special'&&raw.year===2016&&raw.episodes?.length===1)return {anidbId:12351,malId:33950,method:'reviewed-release-correction'};
@@ -13,22 +13,53 @@ export async function resolveAnimeIdentity(raw){
 }
 async function cached(url,{fetcher,signal,html=false,ttl=120000}){
  signal.throwIfAborted();const old=entries.get(url);if(old&&Date.now()-old.time<ttl)return old.value;
- const response=await fetcher(url,{credentials:'omit',redirect:'error',signal,headers:{Accept:html?'text/html':'application/json'}});const text=await boundedText(response,html?3*1024*1024:3*1024*1024);const value=html?text:JSON.parse(text);const size=text.length*2;
- if(size<6*1024*1024){if(old){entries.delete(url);used-=old.size;}while(entries.size&&(entries.size>=12||used+size>8*1024*1024)){const key=entries.keys().next().value;used-=entries.get(key).size;entries.delete(key);}entries.set(url,{value,size,time:Date.now()});used+=size;}
+ const response=await fetcher(url,{credentials:'omit',redirect:'error',signal,headers:{Accept:html?'text/html':'application/json'}});if(!response.ok){const error=new Error(`HTTP ${response.status}`);error.status=response.status;throw error;}const text=await boundedText(response,3*1024*1024);const value=html?text:JSON.parse(text);const size=text.length*2;
+ if(size<6*1024*1024){const prior=entries.get(url);if(prior){entries.delete(url);used-=prior.size;}while(entries.size&&(entries.size>=12||used+size>8*1024*1024)){const key=entries.keys().next().value;used-=entries.get(key).size;entries.delete(key);}entries.set(url,{value,size,time:Date.now()});used+=size;}
  return value;
 }
 export async function requestAnimeAutomatic(data,{fetcher=globalThis.fetch,signal}={}){
- if(!data||!['anime-options','anime-cast'].includes(data.kind)||!Number.isSafeInteger(data.releaseId)||data.releaseId<1||data.kind==='anime-options'&&(!Number.isFinite(data.number)||data.number<0||data.number>100000))throw new Error('Не удалось определить выбранное аниме и серию.');
- const total=signal?AbortSignal.any([signal,AbortSignal.timeout(18000)]):AbortSignal.timeout(18000);
- let raw;for(const origin of ['https://anilibria.top','https://aniliberty.top']){try{raw=await cached(`${origin}/api/v1/anime/releases/${data.releaseId}`,{fetcher,signal:AbortSignal.any([total,AbortSignal.timeout(4500)])});if(raw.id!==data.releaseId)throw new Error('ID не совпал.');break;}catch{raw=null;total.throwIfAborted();}}
+ if(!data||!['anime-options','anime-cast','anime-episodes'].includes(data.kind)||data.provider!==undefined&&!['anilibria','yummyani'].includes(data.provider)||!Number.isSafeInteger(data.releaseId)||data.releaseId<1||data.kind==='anime-options'&&(!Number.isFinite(data.number)||data.number<0||data.number>100000))throw new Error('Не удалось определить выбранное аниме и серию.');
+ if(data.castSource!==undefined&&(data.kind!=='anime-cast'||data.castSource!=='jikan'))throw new Error('Неизвестный каталог персонажей.');
+ const total=signal?AbortSignal.any([signal,AbortSignal.timeout(data.kind==='anime-cast'?28000:18000)]):AbortSignal.timeout(data.kind==='anime-cast'?28000:18000);
+ let raw,yummy;
+ if(data.provider==='yummyani'){
+  const result=await yummyRequest(`/anime/${data.releaseId}`,{fetcher,signal:total});yummy=result.response;
+  if(yummy?.anime_id!==data.releaseId)throw new Error('Каталог вернул другое аниме.');
+  raw={id:yummy.anime_id,alias:yummy.remote_ids?.anilibria_alias,year:yummy.year,mal:{id:Number(yummy.remote_ids?.myanimelist_id)},name:{main:yummy.title,english:yummy.other_titles?.[0],alternative:yummy.other_titles?.join(' / ')}};
+  if(data.kind==='anime-episodes')return yummyRequest(`/anime/${data.releaseId}/videos`,{fetcher,signal:total});
+ }else{
+  if(data.kind==='anime-episodes')throw new Error('Неизвестный каталог серий.');
+  for(const origin of ['https://anilibria.top','https://aniliberty.top']){try{raw=await cached(`${origin}/api/v1/anime/releases/${data.releaseId}`,{fetcher,signal:AbortSignal.any([total,AbortSignal.timeout(4500)])});if(raw.id!==data.releaseId)throw new Error('ID не совпал.');break;}catch{raw=null;total.throwIfAborted();}}
+ }
  if(!raw)throw new Error('Не удалось проверить карточку аниме. Повторим при следующем открытии.');
- const identity=await resolveAnimeIdentity(raw);
+ let identity=await resolveAnimeIdentity(raw);
+ // Yummyani supplies multiple exact alternative names; verify them individually.
+ if(!identity&&yummy)for(const name of yummy.other_titles||[]){identity=await resolveAnimeIdentity({...raw,name:{main:name}});if(identity)break;}
  if(data.kind==='anime-cast'){
   if(!identity)throw new Error('Не удалось безопасно определить релиз AniDB. Чужих персонажей не подставляем.');
-  const url=`https://anidb.net/anime/${identity.anidbId}`;const old=entries.get(url);if(old&&Date.now()-old.time<86400000)return {id:identity.anidbId,html:old.value};
-  if(aniDBBusy||Date.now()-lastAniDB<5000)throw new Error('AniDB просит подождать перед следующей загрузкой.');
-  aniDBBusy=true;lastAniDB=Date.now();try{return {id:identity.anidbId,html:await cached(url,{fetcher,signal:total,html:true,ttl:86400000})};}catch{throw new Error('AniDB сейчас недоступен. Уже сохранённые персонажи и заметки остаются на устройстве.');}finally{aniDBBusy=false;}
+  const url=`https://anidb.net/anime/${identity.anidbId}`;const old=entries.get(url);if(data.castSource!=='jikan'&&old&&Date.now()-old.time<86400000)return {id:identity.anidbId,html:old.value};
+  try{
+   if(data.castSource==='jikan')throw new Error('Выбран резервный каталог');
+   if(Date.now()<aniDBUnavailableUntil)throw new Error('AniDB временно недоступен');
+   const task=aniDBQueue.catch(()=>{}).then(async()=>{
+    total.throwIfAborted();if(Date.now()<aniDBUnavailableUntil)throw new Error('AniDB временно недоступен');const cachedPage=entries.get(url);if(cachedPage&&Date.now()-cachedPage.time<86400000)return cachedPage.value;
+    const wait=Math.max(0,5000-(Date.now()-lastAniDB));if(wait)await new Promise((resolve,reject)=>{const done=()=>{total.removeEventListener('abort',abort);resolve();};const timer=setTimeout(done,wait);const abort=()=>{clearTimeout(timer);reject(total.reason);};total.addEventListener('abort',abort,{once:true});});
+    total.throwIfAborted();lastAniDB=Date.now();return cached(url,{fetcher,signal:AbortSignal.any([total,AbortSignal.timeout(5000)]),html:true,ttl:86400000});
+   });aniDBQueue=task;
+   const html=await task;if(!/id=["']characterlist["']/.test(html)){const bad=entries.get(url);if(bad){used-=bad.size;entries.delete(url);}const error=new Error('AniDB не вернул персонажей');error.status=429;throw error;}
+   return {id:identity.anidbId,html};
+  }catch(error){total.throwIfAborted();if(error.status===429)aniDBUnavailableUntil=Date.now()+60000;}
+  try{
+   const phase=AbortSignal.any([total,AbortSignal.timeout(8000)]);
+   const detail=await cached(`https://api.jikan.moe/v4/anime/${identity.malId}/full`,{fetcher,signal:phase,ttl:86400000});
+   const verified=await resolveAnimeIdentity({year:raw.year,mal:{id:detail.data?.mal_id},name:{main:detail.data?.title,english:detail.data?.title_english}});
+   if(!verified||verified.anidbId!==identity.anidbId||detail.data?.aired?.prop?.from?.year!==raw.year)throw new Error('Другой релиз');
+   const cast=await cached(`https://api.jikan.moe/v4/anime/${identity.malId}/characters`,{fetcher,signal:phase,ttl:86400000});
+   return {id:identity.anidbId,fallback:{malId:identity.malId,title:detail.data.title,characters:cast.data}};
+  }catch{throw new Error('AniDB и резервный каталог персонажей сейчас недоступны. Сохранённый каст остаётся на устройстве.');}
  }
+ if(yummy)return {players:yummyPlayers(await yummyRequest(`/anime/${data.releaseId}/videos`,{fetcher,signal:total}),data.number),anidbId:identity?.anidbId||null,yummyId:data.releaseId};
+
  const query=raw.name?.english||raw.name?.main;let answered=false;
  for(const base of ['https://old.yummyani.me/api','https://api.yani.tv']){
   const url=new URL(base+'/anime');url.searchParams.set('q',String(query).slice(0,100));url.searchParams.set('limit','50');
@@ -40,4 +71,8 @@ export async function requestAnimeAutomatic(data,{fetcher=globalThis.fetch,signa
   }catch{total.throwIfAborted();}
  }
  return {players:[],anidbId:identity?.anidbId||null,message:answered?'Другие варианты для этого релиза пока не подтверждены.':'Не удалось загрузить другие озвучки и субтитры: Yummyani сейчас недоступен.'};
+}
+
+async function yummyRequest(path,{fetcher,signal}){
+ let failure;for(const base of ['https://old.yummyani.me/api','https://api.yani.tv']){try{return await cached(base+path,{fetcher,signal:AbortSignal.any([signal,AbortSignal.timeout(6000)])});}catch(error){failure=error;signal.throwIfAborted();}}throw failure;
 }

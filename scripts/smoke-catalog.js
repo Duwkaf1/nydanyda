@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import {serveAutomatic} from '../e2e/automatic-fixtures.js';
 
 export async function smokeCatalog({ application, page, root }) {
   const releases=JSON.parse(await readFile(path.join(root,'test/fixtures/catalog/releases.json'),'utf8')).map(r=>({...r,age_rating:{value:'R12_PLUS',label:'12+'},genres:[{id:27,name:'Приключения'}]}));
@@ -10,7 +11,7 @@ export async function smokeCatalog({ application, page, root }) {
     const previous=net.fetch;globalThis.__catalogRequests=[];
     net.fetch=async(url,options)=>{
       if((String(url).startsWith('https://old.yummyani.me/api/')||String(url).startsWith('https://api.yani.tv/')))return new Response(JSON.stringify({response:[]}));
-      if(String(url).startsWith('https://anidb.net/anime/'))return new Response('Controlled unavailable',{status:503});
+      if(String(url).startsWith('https://anidb.net/anime/')||String(url).startsWith('https://api.jikan.moe/'))return new Response('Controlled unavailable',{status:503});
       if(!/^https:\/\/(anilibria|aniliberty)\.top\/api\/v1\/anime\//.test(url))return previous(url,options);
       globalThis.__catalogRequests.push(url);
       if(options.credentials!=='omit'||options.redirect!=='error')throw new Error('Unsafe catalog transport options');
@@ -39,11 +40,12 @@ export async function smokeCatalog({ application, page, root }) {
   const requests=await application.evaluate(()=>globalThis.__catalogRequests);assert.ok(requests.filter(url=>url.includes('/releases/9542')).length>=2);
   await page.getByRole('button',{name:'Закрыть плеер',exact:true}).click();
   const yummy=JSON.parse(await readFile(path.join(root,'test/fixtures/catalog/yummy.json'),'utf8'));
-  await application.evaluate(({net},fixture)=>{const previous=net.fetch;net.fetch=(url,options)=>(String(url).startsWith('https://old.yummyani.me/api/')||String(url).startsWith('https://api.yani.tv/'))?Promise.resolve(new Response(JSON.stringify({response:/\/api\/anime\/\d+$/.test(new URL(url).pathname)?fixture:[fixture]}),{headers:{'Content-Type':'application/json'}})):previous(url,options);},yummy);
-  const websiteURL='https://old.yummyani.me/catalog/item/'+yummy.anime_url;await page.context().route(websiteURL,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>Yummyani isolated catalog handoff fixture</title><h1>Yummyani</h1>'}));
+  await application.evaluate(({net},fixture)=>{const previous=net.fetch;net.fetch=(url,options)=>(String(url).startsWith('https://old.yummyani.me/api/')||String(url).startsWith('https://api.yani.tv/'))?Promise.resolve(new Response(JSON.stringify({response:String(url).includes('/videos')?[{video_id:901,number:'1',iframe_url:'https://kodik.info/serial/owned-desktop?autoplay=1',quality:'1080p',data:{dubbing:'AniDUB',player:'Kodik'}},{video_id:902,number:'2',iframe_url:'https://kodik.info/serial/owned-desktop2?autoplay=1',quality:'1080p',data:{dubbing:'AniDUB',player:'Kodik'}}]:/\/anime\/\d+$/.test(new URL(url).pathname)?fixture:[fixture]}),{headers:{'Content-Type':'application/json'}})):previous(url,options);},yummy);
+  await serveAutomatic(page);
   await page.context().route('https://static.yani.tv/**',route=>route.abort());
   const availability=await page.evaluate(()=>window.kadr.uninstallStatus());assert.equal(availability.available,false,'An isolated smoke profile cannot delete an installation');
-  await page.locator('#catalog-provider').selectOption('yummyani');await page.locator('.catalog-card-open').click();await page.waitForFunction(()=>!document.querySelector('#catalog-play').disabled);await page.waitForFunction(()=>{const image=document.querySelector('#release-art img');return image?.src.includes('/storage/releases/posters/9542/')&&image.naturalWidth>0;});const verified=await page.evaluate(()=>window.kadr.catalogRequest({kind:'poster',provider:'yummyani',releaseId:10661,requestId:crypto.randomUUID()}));assert.equal(verified.identity.mal,52991);assert.equal(verified.source,'anilibria');const reused=application.windows().find(window=>window.url().startsWith('https://old.yummyani.me/'));const websitePromise=reused?Promise.resolve(reused):application.waitForEvent('window');await page.locator('#catalog-play').click();const website=await websitePromise;await website.waitForURL(websiteURL);await website.waitForLoadState('domcontentloaded');assert.equal(await website.evaluate(()=>typeof window.kadr),'undefined');assert.ok(website.url().startsWith(websiteURL));await website.close();await page.context().unroute(websiteURL);
-  console.log('PASS: native verified fallback poster, filter/random IPC and expanded Yummyani catalog open the exact anime in an isolated application window');
+  await page.locator('#catalog-provider').selectOption('yummyani');await page.locator('.catalog-card-open').click();await page.waitForFunction(()=>!document.querySelector('#catalog-play').disabled);await page.waitForFunction(()=>{const image=document.querySelector('#release-art img');return image?.src.includes('/storage/releases/posters/9542/')&&image.naturalWidth>0;});const verified=await page.evaluate(()=>window.kadr.catalogRequest({kind:'poster',provider:'yummyani',releaseId:10661,requestId:crypto.randomUUID()}));assert.equal(verified.identity.mal,52991);assert.equal(verified.source,'anilibria');const windows=application.windows().length;await page.locator('#catalog-play').click();await page.waitForSelector('#video-host iframe');assert.equal(application.windows().length,windows);const frame=page.frameLocator('#video-host iframe');assert.equal(await frame.locator('body').evaluate(()=>typeof window.kadr),'undefined');
+  await page.waitForFunction(()=>document.querySelector('#playing-title').textContent.includes('Серия 2'),undefined,{timeout:15000});await page.frameLocator('#video-host iframe').locator('video').evaluate(v=>v.pause());await page.getByRole('button',{name:'Закрыть плеер',exact:true}).click();
+  console.log('PASS: verified fallback poster, Yummyani typed episode list, embedded playback and autoplay next episode without opening a site window');
   console.log('PASS: native catalog search, typed IPC, automatic posters/episodes/HLS audio-video playback, expiring URL refresh and resume without link entry');
 }

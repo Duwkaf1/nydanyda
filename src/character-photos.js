@@ -11,6 +11,12 @@ export function anidbImage(value) {
   return undefined;
 }
 
+export function castImage(value){
+  const primary=anidbImage(value);if(primary)return primary;
+  try{const url=new URL(httpsURL(value));if(url.hostname==='cdn.myanimelist.net'&&!url.port&&url.pathname.startsWith('/images/characters/'))return url.href;}catch{}
+  return undefined;
+}
+
 export function validateCharacterPhoto(input) {
   if (!input || typeof input.url !== 'string' || input.url.length > 2048) return undefined;
   try {

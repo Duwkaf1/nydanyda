@@ -1,3 +1,4 @@
+import {yummyPlayers,managedPlayer} from './anime-online.js';
 import { boundedText } from './subtitles.js';
 import { catalogRelease } from './catalog.js';
 import { validateLibrary } from './core.js';
@@ -30,9 +31,17 @@ export function catalogTitle(raw) {
   if (!episodes.length) throw new Error('Серии ещё не вышли или пока недоступны у провайдера.');
   return validateLibrary([{id:`catalog:anilibria:${item.id}`,title:item.title,catalog:{provider:'anilibria',releaseId:item.id},...(item.posterUrl?{posterUrl:item.posterUrl,anilibriaId:item.id}:{}),episodes}])[0];
 }
+export function yummyTitle(raw,videos) {
+  const item=yummyItem(raw.response);if(!item)throw new Error('Не удалось прочитать карточку аниме.');
+  if(!Array.isArray(videos?.response))throw new Error('Каталог не вернул список серий.');
+  const grouped=new Map();for(const entry of videos.response.slice(0,20000)){const number=Number(entry.number);if(!Number.isFinite(number)||number<0||number>100000)continue;if(!grouped.has(number))grouped.set(number,[]);grouped.get(number).push(entry);}
+  const episodes=[...grouped.keys()].sort((a,b)=>a-b).slice(0,2000).flatMap(number=>{const onlinePlayers=yummyPlayers({response:grouped.get(number)},number).filter(managedPlayer);return onlinePlayers.length?[{id:`yummy-episode:${item.id}:${number}`,number,sources:[],onlinePlayers}]:[];});
+  if(!episodes.length)throw new Error('Для этого релиза пока нет плеера с управлением сериями внутри Yoru. Попробуй другой релиз или повтори позже.');
+  return validateLibrary([{id:`catalog:yummyani:${item.id}`,title:item.title,catalog:{provider:'yummyani',releaseId:item.id},...(item.posterUrl?{posterUrl:item.posterUrl}:{}),episodes}])[0];
+}
 export function bestCatalogQuality(episode, preferred = 1080) {
   const available=[...new Set(episode.sources.filter(s=>s.language==='ru'&&s.audioType!=='original').map(s=>s.quality))].sort((a,b)=>b-a);
-  return available.includes(preferred) ? preferred : available[0];
+  return available.includes(preferred) ? preferred : available[0] ?? episode.onlinePlayers?.find(p=>p.quality)?.quality ?? preferred;
 }
 export function mergeCatalogTitle(fresh, saved) {
   if (!saved) return fresh;
@@ -86,6 +95,7 @@ export function createAnimeCatalog({ transport, now = Date.now } = {}) {
       return {items:raw.data.slice(0,24).map(catalogItem).filter(Boolean),total:Number.isFinite(pagination?.total)?pagination.total:null,hasMore:Number.isInteger(pagination?.total_pages)&&page<pagination.total_pages};
     },options);},
     random(filters,options={}){return load(`random:${Math.random()}`,{...filters,kind:'random',provider:'yummyani',page:1},raw=>{if(!Array.isArray(raw?.response)||raw.warnings?.length)throw new Error('Не удалось подобрать аниме.');return raw.response.map(yummyItem).find(item=>item&&filters.genres.every(id=>item.genreIds.includes(id))&&(!filters.age||item.age===filters.age))||null;},{...options,fresh:true});},
+    episodes(releaseId,options={}){return load(`episodes:${releaseId}`,{kind:'anime-episodes',provider:'yummyani',releaseId},raw=>raw,options);},
     release(releaseId,{provider='anilibria',...options}={}){return load(`release:${provider}:${releaseId}`,{kind:'release',provider,releaseId},raw=>{const item=provider==='yummyani'?yummyItem(raw.response):catalogItem(raw);if(!item||item.id!==releaseId)throw new Error('Каталог вернул другую карточку. Попробуй открыть аниме ещё раз.');return {item,raw};},options);},
   };
 }

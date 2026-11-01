@@ -7,16 +7,17 @@ import { boundedText } from '../src/subtitles.js';
 // The renderer supplies a typed operation, never a destination URL. Only these
 // fixed public API origins are reachable through this bridge.
 export async function requestCatalog(data, { fetcher = globalThis.fetch, signal } = {}) {
-  if(data?.kind==='anime-options'||data?.kind==='anime-cast')return requestAnimeAutomatic(data,{fetcher,signal});
+  if(data?.kind==='anime-options'||data?.kind==='anime-cast'||data?.kind==='anime-episodes')return requestAnimeAutomatic(data,{fetcher,signal});
   if(data?.kind==='cinema-list'||data?.kind==='cinema-detail'||data?.kind==='cinema-genres')return requestCinema(data,{fetcher,signal});
   catalogRequestURL(data);
   const deadline = AbortSignal.timeout(12000);
   const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;
   let failure;
-  for (const origin of (data.provider === 'yummyani' ? CATALOG_HOSTS.slice(0,1) : CATALOG_HOSTS)) {
+  for (const origin of (data.provider === 'yummyani' ? ['https://old.yummyani.me','https://api.yani.tv'] : CATALOG_HOSTS)) {
     combined.throwIfAborted();
     try {
-      const response = await fetcher(catalogRequestURL(data, origin), { credentials: 'omit', redirect: 'error', signal: combined, headers: { Accept: 'application/json' } });
+      const url=data.provider==='yummyani'?catalogRequestURL(data).replace('https://old.yummyani.me/api',origin==='https://api.yani.tv'?origin:origin+'/api'):catalogRequestURL(data,origin);
+      const response = await fetcher(url, { credentials: 'omit', redirect: 'error', signal: AbortSignal.any([combined,AbortSignal.timeout(5500)]), headers: { Accept: 'application/json' } });
       if (response.status === 429) throw new Error('Каталог просит подождать. Повтори поиск немного позже.');
       if (response.status === 404) throw new Error('Это аниме больше не найдено в каталоге.');
       const body = await boundedText(response, 2 * 1024 * 1024);
