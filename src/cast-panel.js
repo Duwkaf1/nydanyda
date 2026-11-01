@@ -5,8 +5,11 @@ import { mergeCastPhotos, validateCharacterPhoto } from './character-photos.js';
 import { characterPhotoPicker } from './character-photo-picker.js';
 import { icon } from './icons.js';
 import { characterDetailsEditor } from './character-details-editor.js';
+import {parseEpisodeAppearances} from './episode-cast.js';
 export function castPanel({ $, node, active, persist, toast }) {
   let cache = readCastCache(); let serial = 0;let autoRequest,autoKey='',autoSequence=0,rateRetries=0,retryTimer;const autoMessages=new Map();
+  let episodeRequest,episodeKey='',episodeSequence=0;const episodeMessages=new Map();
+  const episodeContext=()=>`${active()?.title.id}:${id()}:${active()?.episode.number}`;
   const details = characterDetailsEditor({ $, node, changed: () => render() });
   const photos = characterPhotoPicker({ $, node, save: (releaseId, characterId, photo) => {
     const data = cache[releaseId]; const character = data?.characters.find(item => item.id === characterId);
@@ -24,7 +27,9 @@ export function castPanel({ $, node, active, persist, toast }) {
   function render() {
     details.flush();
     serial++; const value = active(); if (!value) return;
-    $('#cast-context').textContent = `${value.title.title} · ${$('#cast-season').selectedOptions[0]?.textContent || 'Сезон 1'}`;
+    const perEpisode = $('#cast-scope').value === 'episode';
+    $('#cast-view').value=$('#cast-scope').value;
+    $('#cast-context').textContent = `${value.title.title} · ${perEpisode?`Серия ${value.episode.number}`:$('#cast-season').selectedOptions[0]?.textContent || 'Весь релиз'}`;
     $('#cast-settings-context').textContent = $('#cast-context').textContent;
     $('#cast-season-label').hidden = $('#cast-season').options.length < 2;
     $('#anidb-id').value = id() ? anidbPage(id()) : ''; $('#cast-list').replaceChildren(); $('#cast-episode-editor').replaceChildren();
@@ -34,11 +39,17 @@ export function castPanel({ $, node, active, persist, toast }) {
     $('#save-episode-cast').disabled = !known || season() !== (value.episode.season || 1);
     $('#cast-settings-label').textContent = known || value.title.catalog ? 'Настроить' : 'Добавить персонажей';
     $('#retry-auto-cast').hidden=!value.title.catalog||!autoMessages.has(value.title.id);
+    $('#cast-show-all').hidden=true;$('#retry-episode-cast').hidden=true;
     $('#cast-episode-settings').hidden = !known;
     if (!known) { $('#cast-status').textContent = value.title.catalog ? autoMessages.get(value.title.id)||'Автоматически загружаем персонажей из AniDB…' : 'Персонажей пока нет. Список можно добавить в настройках.'; return; }
-    const perEpisode = $('#cast-scope').value === 'episode';
-    const characters = perEpisode ? castForEpisode(data, value.episode.number) : data.characters;
-    $('#cast-status').textContent = perEpisode ? characters === null ? 'Для этой серии данные ещё не отмечены.' : `Серия ${value.episode.number} · отмечено вручную: ${characters.length}` : `${['MyAnimeList','AniList'].includes(data.source)?data.source+' · ':''}Персонажей: ${characters.length} · имена и заметки можно менять`;
+    const manual=Array.isArray(data.manualEpisodes?.[String(value.episode.number)]);
+    const single=data.singleRelease===true&&value.episode.number===1;
+    const characters = perEpisode ? (single&&!manual?data.characters:castForEpisode(data, value.episode.number)) : data.characters;
+    const appearances=data.automaticEpisodes?.[String(value.episode.number)];
+    const source=appearances&&!manual?` · ${appearances.source||'Black Clover Wiki'}`:'';
+    $('#cast-status').textContent = perEpisode ? characters === null ? episodeMessages.get(episodeContext())||(value.title.catalog?(episodeRequest&&episodeKey===episodeContext()?'Загружаем подтверждённые появления в этой серии…':'Нет подтверждённых данных по этой серии.'):'Для этой серии данные ещё не отмечены.') : single&&!manual?`Одноэпизодный релиз · персонажей: ${characters.length}`:`Серия ${value.episode.number} · ${manual?'отмечено вручную':'найдено в каталоге'}: ${characters.length}${source}` : `${['MyAnimeList','AniList'].includes(data.source)?data.source+' · ':''}Весь релиз · персонажей: ${characters.length} · имена и заметки можно менять`;
+    $('#cast-show-all').hidden=!perEpisode||Boolean(characters?.length);
+    $('#retry-episode-cast').hidden=!perEpisode||!value.title.catalog||!episodeMessages.has(episodeContext());
     for (const character of [...(characters || [])].sort((a, b) => characterRole(a.role).rank - characterRole(b.role).rank)) {
       const personal = details.attach(character, { titleId: value.title.id, releaseId: data.id, characterId: character.id });
       const card = node('article', undefined, 'cast-card'); const role = characterRole(character.role).label;
@@ -74,10 +85,26 @@ export function castPanel({ $, node, active, persist, toast }) {
     const value = active(); if (!value) return;
     const numbers = [...new Set([1, ...value.title.episodes.map(ep => ep.season || 1), ...(value.title.seasons || []).map(item => item.number)])].sort((a, b) => a - b);
     $('#cast-season').replaceChildren(...numbers.map(number => { const option = node('option', value.title.seasons?.find(s => s.number === number)?.title || `Сезон ${number}`); option.value = number; return option; }));
-    $('#cast-season').value = value.episode.season || 1; render();ensureAutomatic();
+    $('#cast-season').value = value.episode.season || 1; render();ensureAutomatic();ensureEpisode();
+  }
+  async function ensureEpisode(force=false){
+    const value=active(),data=cache[id()];const key=episodeContext();
+    if(!value?.title.catalog||!data||season()!==(value.episode.season||1))return;
+    if(!force&&(data.singleRelease||data.automaticEpisodes?.[String(value.episode.number)]&&Date.now()-data.automaticEpisodes[String(value.episode.number)].updatedAt<86400000||episodeKey===key&&(episodeRequest||episodeMessages.has(key))))return;
+    episodeRequest?.abort();const controller=new AbortController();episodeRequest=controller;episodeKey=key;const token=++episodeSequence;episodeMessages.delete(key);render();
+    try{
+      const result=await discoveryRequest({kind:'anime-episode-cast',provider:value.title.catalog.provider,releaseId:value.title.catalog.releaseId,number:value.episode.number},{signal:controller.signal});
+      if(token!==episodeSequence||episodeContext()!==key||active()!==value)return;
+      if(result.id!==data.id||result.number!==value.episode.number)throw new Error('Источник вернул другой релиз или серию.');
+      const latest=cache[result.id];if(!latest)throw new Error('Список персонажей изменился. Повтори загрузку.');
+      if(result.singleRelease===true){latest.singleRelease=true;save(latest);}
+      else if(result.supported===false)episodeMessages.set(key,result.message||'Нет подтверждённых данных по этой серии.');
+      else{const appearances=parseEpisodeAppearances(result,value.episode.number);latest.automaticEpisodes||={};latest.automaticEpisodes[String(value.episode.number)]=appearances;save(latest);}
+    }catch(error){if(token===episodeSequence&&!controller.signal.aborted)episodeMessages.set(key,`Не удалось загрузить появления этой серии. ${(error.message||'Повтори позже.').replace(/^Error invoking remote method '[^']+': (?:Error: )?/,'')}`);}
+    finally{if(token===episodeSequence){episodeRequest=null;render();}}
   }
   async function ensureAutomatic(force=false){
-    const value=active();if(!value?.title.catalog){clearTimeout(retryTimer);autoRequest?.abort();autoSequence++;autoRequest=null;return;}const key=`${value.title.id}:${season()}`;
+    const value=active();if(!value?.title.catalog){clearTimeout(retryTimer);autoRequest?.abort();autoSequence++;autoRequest=null;episodeRequest?.abort();episodeSequence++;episodeRequest=null;return;}const key=`${value.title.id}:${season()}`;
     if(!force&&((autoKey===key&&autoRequest)||cache[id()]&&Date.now()-cache[id()].updatedAt<86400000))return;
     clearTimeout(retryTimer);if(autoKey!==key)rateRetries=0;autoRequest?.abort();autoRequest=new AbortController();autoKey=key;const token=++autoSequence;const titleId=value.title.id;autoMessages.delete(titleId);$('#retry-auto-cast').hidden=true;
     try{
@@ -89,14 +116,17 @@ export function castPanel({ $, node, active, persist, toast }) {
        if(token!==autoSequence||active()?.title.id!==titleId)return;
        if(result.id!==expectedId)throw new Error('Резервный каталог вернул другой релиз.');
        data=result.anilist?parseAniListCast(result.anilist,result.id):parseJikanCast(result.fallback,result.id);
-      }current.title.anidbId=result.id;save(mergeCastPhotos(data,cache[result.id]));persist();autoMessages.delete(titleId);render();
+      }current.title.anidbId=result.id;save(mergeCastPhotos(data,cache[result.id]));persist();autoMessages.delete(titleId);render();ensureEpisode();
     }catch(error){if(token===autoSequence&&!autoRequest.signal.aborted&&active()?.title.id===titleId){autoMessages.set(titleId,(error.message||'Не удалось загрузить персонажей.').replace(/^Error invoking remote method '[^']+': (?:Error: )?/,''));render();if(/подождать перед следующей/.test(error.message)&&rateRetries++<1)retryTimer=setTimeout(()=>{if(active()?.title.id===titleId)ensureAutomatic(true);},5100);}}
     finally{if(token===autoSequence)autoRequest=null;}
   }
   $('#retry-auto-cast').onclick=()=>ensureAutomatic(true);
+  $('#cast-show-all').onclick=()=>{$('#cast-scope').value='season';render();};
+  $('#retry-episode-cast').onclick=()=>ensureEpisode(true);
+  $('#cast-view').onchange=()=>{$('#cast-scope').value=$('#cast-view').value;$('#cast-scope').onchange();};
   $('#cast-season').onchange = () => { if (season() !== (active()?.episode.season || 1)) $('#cast-scope').value = 'season'; render(); }; $('#cast-scope').onchange = () => {
     if ($('#cast-scope').value === 'episode') $('#cast-season').value = active()?.episode.season || 1;
-    render();
+    render();ensureEpisode();
   };
   $('#bind-anidb').onclick = () => {
     try {

@@ -1,3 +1,4 @@
+import {smokePlayerMedia} from './smoke-player-media.js';
 import {smokeAdblock} from './smoke-adblock.js';
 import {smokeAutomatic} from './smoke-automatic.js';
 import { _electron as electron } from '@playwright/test';
@@ -245,6 +246,7 @@ try {
   await smokeCatalog({application,page,root});
   await smokeAdblock({application,page,root});
   await smokeAutomatic({application,page,root});
+  await smokePlayerMedia({page});
   await smokeCinema({application,page,root});
   assert.deepEqual(errors, []);
   const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));

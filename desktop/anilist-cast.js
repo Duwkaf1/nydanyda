@@ -1,5 +1,5 @@
 import {boundedText} from '../src/subtitles.js';
-const QUERY=`query YoruCast($mal:Int!,$page:Int!){Media(idMal:$mal,type:ANIME){idMal title{romaji english native} characters(page:$page,perPage:50,sort:[ROLE,ID]){pageInfo{hasNextPage} edges{role node{id name{full} image{large}} voiceActors(language:JAPANESE){name{full}}}}}}`;
+const QUERY=`query YoruCast($mal:Int!,$page:Int!){Media(idMal:$mal,type:ANIME){idMal title{romaji english native} characters(page:$page,perPage:50,sort:[ROLE,ID]){pageInfo{hasNextPage} edges{role node{id name{full alternative} image{large}} voiceActors(language:JAPANESE){name{full}}}}}}`;
 const cache=new Map();
 export async function requestAniListCast(identity,{fetcher,signal,verify}){
  const old=cache.get(identity.malId);if(old&&Date.now()-old.time<86400000)return old.value;

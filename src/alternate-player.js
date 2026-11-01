@@ -43,7 +43,7 @@ export async function alternatePlayer(element, source, quality, signal, onPlayer
     if (master) { objectURL = URL.createObjectURL(new Blob([master], { type: 'application/vnd.apple.mpegurl' })); url = objectURL; }
   }
   signal.throwIfAborted(); element.classList.add('video-js', 'vjs-big-play-centered');
-  const player = videojs(element, { language: 'ru', controls: true, autoplay: false, preload: 'metadata', fluid: false, fill: true, html5: { nativeTextTracks: true, vhs: { overrideNative: true, enableLowInitialPlaylist: false } } });
+  const player = videojs(element, { language: 'ru', controls: false, autoplay: false, preload: 'metadata', fluid: false, fill: true, html5: { nativeTextTracks: true, vhs: { overrideNative: true, enableLowInitialPlaylist: false } } });
   const release = () => { if (!player.isDisposed()) player.dispose(); if (objectURL) URL.revokeObjectURL(objectURL); };
   signal.addEventListener('abort', release, { once: true });
   onPlayer(player);

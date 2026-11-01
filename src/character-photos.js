@@ -59,5 +59,5 @@ export function createCharacterSearch(fetcher = globalThis.fetch, now = Date.now
 export function mergeCastPhotos(incoming, previous) {
   if (!previous || previous.id !== incoming.id) return incoming;
   const photos = new Map(previous.characters.map(character => [character.id, validateCharacterPhoto(character.photo)]));
-  return { ...incoming, manualEpisodes: previous.manualEpisodes || {}, characters: incoming.characters.map(character => photos.get(character.id) ? { ...character, photo: photos.get(character.id) } : character) };
+  return { ...incoming, manualEpisodes: previous.manualEpisodes || {},automaticEpisodes:previous.automaticEpisodes||{},...(previous.singleRelease===true?{singleRelease:true}:{}), characters: incoming.characters.map(character => photos.get(character.id) ? { ...character, photo: photos.get(character.id) } : character) };
 }

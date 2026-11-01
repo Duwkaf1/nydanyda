@@ -1,3 +1,4 @@
+import {playerMedia} from './player-media.js';
 import {createPlayerProtection} from './player-protection.js';
 import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
@@ -67,6 +68,8 @@ else {
     const trusted = event => {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('Недоступно');
     };
+    const media=playerMedia({ipcMain,window:()=>mainWindow,trusted});
+    mainWindow.on('close',()=>media.stop());
     const availability=()=>uninstallAvailability({packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),userData:app.getPath('userData')});
     const uninstall=uninstallHandler({availability,confirm:async()=>{const result=await dialog.showMessageBox(mainWindow,{type:'warning',title:'Удалить Yoru полностью?',message:'Удалить приложение и все его данные?',detail:'Будут удалены Yoru, библиотека, история просмотра, заметки, темы и кэш. Восстановить эти данные после удаления нельзя. Твои видеофайлы и документы вне профиля Yoru останутся на месте.',buttons:['Отмена','Удалить полностью'],defaultId:0,cancelId:0,noLink:true});return result.response===1;},quit:()=>app.quit()});
     ipcMain.handle('app:uninstall-status',async event=>{trusted(event);const result=await availability();return {available:result.available,message:result.reason||''};});

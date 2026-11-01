@@ -147,7 +147,7 @@
           <details id="episode-picker" class="player-drawer"><summary>Серии</summary><div id="episode-list" class="episodes"></div></details>
         <details id="cast-panel" class="settings-card player-drawer"><summary>Персонажи</summary>
           <div class="cast-simple-heading"><p id="cast-context" class="cast-context"></p><div class="cast-simple-actions"><label id="cast-season-label">Сезон<select id="cast-season"></select></label><button id="open-cast-settings" class="quiet" type="button" aria-label="Настройки персонажей" aria-haspopup="dialog" aria-controls="cast-settings-dialog"><span data-icon="settings"></span><span id="cast-settings-label">Настроить</span></button></div></div>
-          <p id="cast-status" role="status" class="cast-caption"></p><button id="retry-auto-cast" type="button" class="quiet" hidden>Повторить загрузку персонажей</button><div id="cast-list"></div>
+          <label class="cast-view-label">Показать <select id="cast-view"><option value="season">Весь релиз</option><option value="episode">Эта серия</option></select></label><p id="cast-status" role="status" class="cast-caption"></p><button id="retry-auto-cast" type="button" class="quiet" hidden>Повторить загрузку персонажей</button><button id="retry-episode-cast" type="button" class="quiet" hidden>Повторить загрузку появлений</button><button id="cast-show-all" type="button" class="quiet" hidden>Показать персонажей всего релиза</button><div id="cast-list"></div>
         </details>
         <details class="info-box player-drawer"><summary>Демонстрация в Discord</summary><p>В установленном Discord выбери демонстрацию окна «Yoru» и включи передачу звука. Плеер использует обычный аудиовыход Windows. Не транслируй весь экран, если нужен только звук приложения.</p><p>Захват звука и изображения ещё нужно проверить на Windows. При проблемах с аппаратным ускорением запусти приложение с параметром --disable-gpu.</p></details>
         </div>
@@ -164,7 +164,7 @@
       <p class="muted">Эти настройки нужны, только если персонажей ещё нет или выбран другой список. Имена и заметки меняются прямо на карточках.</p>
       <label class="cast-setting-label" for="anidb-id">Ссылка на аниме в AniDB</label><div class="poster-url-row"><input id="anidb-id" type="text" maxlength="2048" placeholder="https://anidb.net/anime/…"><button id="bind-anidb" class="quiet" type="button">Сохранить</button></div>
       <p class="settings-hint">Выбранная страница определяет, чей список использовать. Для загрузки списка доступны дополнительные способы ниже.</p>
-      <label class="cast-setting-label" for="cast-scope">Показывать персонажей</label><select id="cast-scope"><option value="season">Всего сезона</option><option value="episode">Отмеченных в этой серии</option></select>
+      <label class="cast-setting-label" for="cast-scope">Показывать персонажей</label><select id="cast-scope"><option value="season">Весь релиз</option><option value="episode">Эта серия</option></select>
       <p id="cast-settings-status" role="status" class="muted"></p>
       <details id="cast-episode-settings"><summary>Выбрать персонажей этой серии</summary><p class="muted">Отметь, кто появился в текущей серии. Эти отметки сохраняются только у тебя.</p><div id="cast-episode-editor"></div><button id="save-episode-cast" class="quiet" type="button" disabled>Сохранить выбор</button></details>
       <details id="cast-extra-settings"><summary>Дополнительные способы загрузки</summary>

@@ -11,7 +11,7 @@ export function onlinePlayerEntries(value){
  if(!Array.isArray(value)||value.length>40)throw new Error('У серии может быть до 40 вариантов онлайн-просмотра.');
  const ids=new Set();return value.map(item=>{
   if(!item||typeof item.id!=='string'||!/^yummy:\d+$/.test(item.id)||ids.has(item.id)||!['dub','original','unknown'].includes(item.audioType)||typeof item.voice!=='string'||!item.voice.trim()||item.voice.length>120||typeof item.player!=='string'||!item.player.trim()||item.player.length>80||typeof item.subtitles!=='boolean'||![null,480,720,1080].includes(item.quality))throw new Error('Не удалось прочитать вариант просмотра.');
-  ids.add(item.id);return {id:item.id,url:animeEmbedURL(item.url),voice:item.voice,player:item.player,audioType:item.audioType,subtitles:item.subtitles,quality:item.quality};
+  ids.add(item.id);return {id:item.id,url:animeEmbedURL(item.url),voice:item.voice,player:item.player,audioType:item.audioType,subtitles:item.subtitles,quality:item.quality,...(Number.isFinite(item.duration)&&item.duration>0&&item.duration<604800?{duration:item.duration}:{})};
  });
 }
 export function yummyPlayers(raw,number){
@@ -25,7 +25,7 @@ export function yummyPlayers(raw,number){
   const voice=label.trim().slice(0,120);const kind=String(data.translation_type||data.dubbing_type||data.translation?.type||'');const subtitles=data.is_subtitles===true||entry.is_subtitles===true||/субтитр|сабы|subtitles|\bsubs?\b/i.test(`${voice} ${kind}`);const original=subtitles||/оригинал|original|японск|\braw\b/i.test(`${voice} ${kind}`);
   // A non-Russian dub is never advertised as a Russian voice.
   if(/английск|украинск|english|україн/i.test(voice))continue;
-  try{const url=animeEmbedURL(entry.iframe_url||entry.player_url||entry.url||data.iframe_url);const id=`yummy:${entry.video_id||entry.id}`;if(ids.has(id))continue;ids.add(id);const quality=String(entry.quality||'').match(/^(480|720|1080)p?$/)?.[1];result.push({id,url,voice,player:data.player.trim().slice(0,80),audioType:original?'original':'dub',subtitles,quality:quality?Number(quality):null});}catch{/* Unsupported hosts remain unavailable, never guessed. */}
+  try{const url=animeEmbedURL(entry.iframe_url||entry.player_url||entry.url||data.iframe_url);const id=`yummy:${entry.video_id||entry.id}`;if(ids.has(id))continue;ids.add(id);const quality=String(entry.quality||'').match(/^(480|720|1080)p?$/)?.[1];result.push({id,url,voice,player:data.player.trim().slice(0,80),audioType:original?'original':'dub',subtitles,quality:quality?Number(quality):null,...(Number.isFinite(entry.duration)&&entry.duration>0&&entry.duration<604800?{duration:entry.duration}:{})});}catch{/* Unsupported hosts remain unavailable, never guessed. */}
  }
  return onlinePlayerEntries(result.slice(0,40));
 }
@@ -63,7 +63,7 @@ export function parseAniListCast(raw,expectedId){
  const seen=new Set();const characters=raw.characters.slice(0,200).flatMap(entry=>{
   const character=entry?.node;if(!Number.isSafeInteger(character?.id)||character.id<1||character.id>=1000000000||typeof character.name?.full!=='string'||!character.name.full.trim()||seen.has(character.id))return [];seen.add(character.id);
   let imageUrl;try{const url=new URL(character.image?.large);if(url.protocol==='https:'&&url.hostname==='s4.anilist.co'&&!url.port&&/^\/file\/anilistcdn\/character\/(?:large|medium)\//.test(url.pathname))imageUrl=url.href;}catch{}
-  return [{id:2000000000+character.id,name:character.name.full.slice(0,200),role:entry.role==='MAIN'?'main character in':entry.role==='SUPPORTING'?'secondary cast in':'appears in',...(imageUrl?{imageUrl}:{}),actors:(Array.isArray(entry.voiceActors)?entry.voiceActors:[]).filter(a=>typeof a?.name?.full==='string').slice(0,20).map(a=>({id:null,name:a.name.full.slice(0,160)}))}];
+  return [{id:2000000000+character.id,name:character.name.full.slice(0,200),...(Array.isArray(character.name.alternative)?{aliases:character.name.alternative.filter(n=>typeof n==='string'&&n.length<=160).slice(0,16)}:{}),role:entry.role==='MAIN'?'main character in':entry.role==='SUPPORTING'?'secondary cast in':'appears in',...(imageUrl?{imageUrl}:{}),actors:(Array.isArray(entry.voiceActors)?entry.voiceActors:[]).filter(a=>typeof a?.name?.full==='string').slice(0,20).map(a=>({id:null,name:a.name.full.slice(0,160)}))}];
  });if(!characters.length)throw new Error('AniList вернул пустой состав.');
  return {id:expectedId,title:String(raw.title||'').slice(0,200),source:'AniList',characters,episodes:[],updatedAt:Date.now()};
 }

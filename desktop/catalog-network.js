@@ -7,7 +7,7 @@ import { boundedText } from '../src/subtitles.js';
 // The renderer supplies a typed operation, never a destination URL. Only these
 // fixed public API origins are reachable through this bridge.
 export async function requestCatalog(data, { fetcher = globalThis.fetch, signal } = {}) {
-  if(data?.kind==='anime-options'||data?.kind==='anime-cast'||data?.kind==='anime-episodes')return requestAnimeAutomatic(data,{fetcher,signal});
+  if(data?.kind==='anime-options'||data?.kind==='anime-cast'||data?.kind==='anime-episodes'||data?.kind==='anime-episode-cast')return requestAnimeAutomatic(data,{fetcher,signal});
   if(data?.kind==='cinema-list'||data?.kind==='cinema-detail'||data?.kind==='cinema-genres')return requestCinema(data,{fetcher,signal});
   catalogRequestURL(data);
   const deadline = AbortSignal.timeout(12000);

@@ -1,4 +1,4 @@
-import {yummyPlayers,managedPlayer} from './anime-online.js';
+import {yummyPlayers} from './anime-online.js';
 import { boundedText } from './subtitles.js';
 import { catalogRelease } from './catalog.js';
 import { validateLibrary } from './core.js';
@@ -35,8 +35,8 @@ export function yummyTitle(raw,videos) {
   const item=yummyItem(raw.response);if(!item)throw new Error('Не удалось прочитать карточку аниме.');
   if(!Array.isArray(videos?.response))throw new Error('Каталог не вернул список серий.');
   const grouped=new Map();for(const entry of videos.response.slice(0,20000)){const number=Number(entry.number);if(!Number.isFinite(number)||number<0||number>100000)continue;if(!grouped.has(number))grouped.set(number,[]);grouped.get(number).push(entry);}
-  const episodes=[...grouped.keys()].sort((a,b)=>a-b).slice(0,2000).flatMap(number=>{const onlinePlayers=yummyPlayers({response:grouped.get(number)},number).filter(managedPlayer);return onlinePlayers.length?[{id:`yummy-episode:${item.id}:${number}`,number,sources:[],onlinePlayers}]:[];});
-  if(!episodes.length)throw new Error('Для этого релиза пока нет плеера с управлением сериями внутри Yoru. Попробуй другой релиз или повтори позже.');
+  const episodes=[...grouped.keys()].sort((a,b)=>a-b).slice(0,2000).flatMap(number=>{const onlinePlayers=yummyPlayers({response:grouped.get(number)},number);return onlinePlayers.length?[{id:`yummy-episode:${item.id}:${number}`,number,sources:[],onlinePlayers}]:[];});
+  if(!episodes.length)throw new Error('Для этого релиза пока нет опубликованного плеера. Попробуй другой релиз или повтори позже.');
   return validateLibrary([{id:`catalog:yummyani:${item.id}`,title:item.title,catalog:{provider:'yummyani',releaseId:item.id},...(item.posterUrl?{posterUrl:item.posterUrl}:{}),episodes}])[0];
 }
 export function bestCatalogQuality(episode, preferred = 1080) {

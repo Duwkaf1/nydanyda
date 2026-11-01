@@ -8,6 +8,10 @@ contextBridge.exposeInMainWorld('kadr', Object.freeze({
   openAniDB: data => ipcRenderer.invoke('anidb:open', data),
   fetchAniDB: data => ipcRenderer.invoke('anidb:fetch', data),
   openWebPlayer: url => ipcRenderer.invoke('player:open', url),
+  bindPlayer: data => ipcRenderer.invoke('player-media:bind',data),
+  commandPlayer: data => ipcRenderer.invoke('player-media:command',data),
+  unbindPlayer: id => ipcRenderer.send('player-media:unbind',id),
+  onPlayerState: callback => { const listener=(_event,value)=>callback(value);ipcRenderer.on('player-media:state',listener);return ()=>ipcRenderer.removeListener('player-media:state',listener); },
   catalogRequest: data => ipcRenderer.invoke('catalog:request', data),
   cancelCatalog: requestId => ipcRenderer.send('catalog:cancel', requestId),
 }));

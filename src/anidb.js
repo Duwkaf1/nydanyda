@@ -1,3 +1,4 @@
+import {automaticEpisodeCharacters,validEpisodeAppearances} from './episode-cast.js';
 import { animeId } from './media-schema.js';
 import { anidbImage, castImage, validateCharacterPhoto } from './character-photos.js';
 export function characterRole(role) {
@@ -49,7 +50,7 @@ export function readCastCache(storage = localStorage) {
         const safePhoto = validateCharacterPhoto(photo); const safeImage = castImage(imageUrl);
         return { ...rest, ...(safePhoto ? { photo: safePhoto } : {}), ...(safeImage ? { imageUrl: safeImage } : {}), actors: character.actors.map(actor => { const { imageUrl, ...rest } = actor; const image = anidbImage(imageUrl); return { ...rest, ...(image ? { imageUrl: image } : {}) }; }) };
       });
-      result[data.id] = { ...data, characters, manualEpisodes };
+      result[data.id] = { ...data, characters, manualEpisodes,automaticEpisodes:validEpisodeAppearances(data.automaticEpisodes) };
     }
     return result;
   } catch { return {}; }
@@ -60,5 +61,5 @@ export function saveCastCache(cache, storage = localStorage) {
 }
 export function castForEpisode(data, number) {
   const ids = data?.manualEpisodes?.[String(number)];
-  return Array.isArray(ids) ? data.characters.filter(character => ids.includes(character.id)) : null;
+  return Array.isArray(ids) ? data.characters.filter(character => ids.includes(character.id)) : automaticEpisodeCharacters(data,number);
 }

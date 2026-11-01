@@ -1,3 +1,4 @@
+import {playerControls} from './player-controls.js';
 import {onlinePlayback} from './online-playback.js';
 import { PlaybackPlan, validateLibrary, httpsURL, MAX_LIBRARY_TITLES, voiceKey } from './core.js';
 import { loadState, saveState, savePlaybackState } from './storage.js';
@@ -42,6 +43,7 @@ let settingsUI;
 let discovery;
 const catalogFreshness = new Map();
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const chrome=playerControls({host:$('#video-host'),fullscreen,status});
 const loading = playbackLoading({ host: $('#video-host'), preferences, reducedMotion });
 decorateIcons();
 function applyPreferences() {
@@ -139,7 +141,7 @@ for (const input of document.querySelectorAll('[data-settings-group]')) {
     if (group === 'manual') visibleCount = pageSize();
     applyPreferences(); storePreferences();
     if (group === 'watching') {
-      if(key==='audioMode'&&active){active.watching.audioMode=preferences.watching.audioMode;if(!online?.chooseAudio(preferences.watching.audioMode))restartSource();}
+      if(key==='audioMode'&&active){const desired=preferences.watching.audioMode;if(!online?.chooseAudio(desired)){active.watching.audioMode=desired;restartSource();}}
       else if(key==='engine'&&!online?.current())restartSource();
       else viewing?.subtitles();
     }
@@ -430,7 +432,7 @@ $('#import-file').onchange = async event => {
 };
 
 function stopMedia() {
-  online?.stop();
+  chrome.stop();online?.stop();
   loading.hide();
   generation++;
   // libass needs the video parent while removing its canvas. Dispose subtitles
@@ -504,10 +506,10 @@ async function startSource(retryDeadline) {
   const config = active.config;
   const timeoutMs = active.recovery.timeoutSeconds * 1000;
   let element = node('video'); video = element;
-  element.controls = true; element.preload = 'metadata'; element.playsInline = true;
+  element.controls = false; element.preload = 'metadata'; element.playsInline = true;
   const configure = () => { element.volume = active.session.volume; element.muted = active.session.muted; element.defaultPlaybackRate = active.session.rate; element.playbackRate = active.session.rate; };
   configure();
-  element.setAttribute('aria-label', 'Видеоплеер'); $('#video-host').append(element);
+  element.setAttribute('aria-label', 'Видеоплеер'); $('#video-host').append(element);chrome.video(element);
   loading.show();
   const listeners = [];
   const on = (name, fn) => { element.addEventListener(name, fn); listeners.push([name, fn]); };
@@ -572,7 +574,7 @@ async function startSource(retryDeadline) {
         alternate = player; const actual = player.tech(true).el();
         if (actual !== element) {
           for (const [name, fn] of listeners) { element.removeEventListener(name, fn); actual.addEventListener(name, fn); }
-          element = actual; video = actual; configure(); viewing?.attach(actual);
+          element = actual; video = actual; configure(); viewing?.attach(actual);chrome.video(actual);
         }
         player.on('error', fail);
       });
@@ -647,7 +649,7 @@ function refreshOnlineControls(){
  if(!active)return;for(const option of $('#watch-audio-mode').options)option.disabled=!(active.title.catalog&&option.value==='original')&&!active.episode.sources.some(source=>option.value==='original'?source.audioType==='original':source.audioType!=='original'&&source.language==='ru')&&!(online?.players()||[]).some(player=>player.audioType===option.value);
  viewing?.sources();viewing?.subtitles();
 }
-online=onlinePlayback({$,node,active:()=>active,video:()=>video,persist,enter(){recordProgress(true);if(video)resumeAt=video.currentTime||resumeAt;stopMedia();active.checkpoint=resumeAt;},refresh:refreshOnlineControls,status,onTime(time){if(!active)return;resumeAt=time;active.checkpoint=time;if(Date.now()-lastSave>3000){state.progress[active.title.id]={episodeId:active.episode.id,time,updatedAt:Date.now()};lastSave=Date.now();persist(true);}},onEnded(){if(preferences.autoNext)nextEpisode();else status('Серия закончилась.');}});
+online=onlinePlayback({$,node,chrome,audioResolved(mode){preferences.watching.audioMode=mode;storePreferences();},active:()=>active,video:()=>video,persist,enter(){recordProgress(true);if(video)resumeAt=video.currentTime||resumeAt;stopMedia();active.checkpoint=resumeAt;},refresh:refreshOnlineControls,status,onTime(time){if(!active)return;resumeAt=time;active.checkpoint=time;if(Date.now()-lastSave>3000){state.progress[active.title.id]={episodeId:active.episode.id,time,updatedAt:Date.now()};lastSave=Date.now();persist(true);}},onEnded(){if(preferences.autoNext)nextEpisode();else status('Серия закончилась.');}});
 casts = castPanel({ $, node, active: () => active, persist, toast });
 function retainCatalogTitle(title) {
   const index = state.titles.findIndex(item => item.id === title.id);
