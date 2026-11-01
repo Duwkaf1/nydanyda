@@ -1,0 +1,2 @@
+# Filter inputs and their recorded SHA-256 values must be byte-identical on Windows.
+data/adblock/** -text

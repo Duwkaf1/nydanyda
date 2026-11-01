@@ -71,9 +71,10 @@ export async function requestAnimeAutomatic(data,{fetcher=globalThis.fetch,signa
   const url=new URL(base+'/anime');url.searchParams.set('q',String(query).slice(0,100));url.searchParams.set('limit','50');
   try{
    const phase=AbortSignal.any([total,AbortSignal.timeout(6000)]);const search=await cached(url.href,{fetcher,signal:phase});if(!Array.isArray(search.response))continue;answered=true;
-   const matches=search.response.filter(item=>Number.isSafeInteger(item.anime_id)&&(!item.year||item.year===raw.year)&&(item.remote_ids?.anilibria_alias===raw.alias||identity&&Number(item.remote_ids?.myanimelist_id)===identity.malId));
-   if(matches.length!==1)continue;
-   const item=matches[0];const videos=await cached(`${base}/anime/${item.anime_id}/videos`,{fetcher,signal:phase});return {players:yummyPlayers(videos,data.number),anidbId:identity?.anidbId||null,yummyId:item.anime_id};
+   const matches=[];for(const item of search.response)if(await yummyReleaseMatch(item,raw,identity))matches.push(item);
+   if(!matches.length||matches.length>3||matches.length>1&&matches.some(item=>Number(item.remote_ids?.myanimelist_id)!==identity?.malId))continue;
+   const players=new Map();for(const item of matches){const videos=await cached(`${base}/anime/${item.anime_id}/videos`,{fetcher,signal:phase});for(const player of yummyPlayers(videos,data.number))players.set(player.id,player);}
+   return {players:[...players.values()].slice(0,40),anidbId:identity?.anidbId||null,yummyId:matches[0].anime_id};
   }catch{total.throwIfAborted();}
  }
  return {players:[],anidbId:identity?.anidbId||null,message:answered?'Другие варианты для этого релиза пока не подтверждены.':'Не удалось загрузить другие озвучки и субтитры: Yummyani сейчас недоступен.'};
@@ -81,4 +82,18 @@ export async function requestAnimeAutomatic(data,{fetcher=globalThis.fetch,signa
 
 async function yummyRequest(path,{fetcher,signal}){
  let failure;for(const base of ['https://old.yummyani.me/api','https://api.yani.tv']){try{return await cached(base+path,{fetcher,signal:AbortSignal.any([signal,AbortSignal.timeout(6000)])});}catch(error){failure=error;signal.throwIfAborted();}}throw failure;
+}
+
+export async function yummyReleaseMatch(item,raw,identity){
+ if(!Number.isSafeInteger(item?.anime_id)||item.anime_id<1)return false;
+ const linkedMal=Number(item.remote_ids?.myanimelist_id);const exactId=identity&&linkedMal===identity.malId;
+ if(identity&&linkedMal&&linkedMal!==identity.malId)return false;
+ const sameYear=!item.year||item.year===raw.year;
+ if(sameYear&&(exactId||typeof raw.alias==='string'&&raw.alias.length>0&&item.remote_ids?.anilibria_alias===raw.alias))return true;
+ // Festival and disc dates can differ. Only an exact ID plus an indexed name
+ // may bridge that difference; a similarly titled TV season cannot.
+ if(exactId)for(const name of [item.title,...(Array.isArray(item.other_titles)?item.other_titles:[])]){
+  if(!name)continue;const verified=await resolveAnimeIdentity({year:raw.year,mal:{id:identity.malId},name:{main:name}});if(verified?.anidbId===identity.anidbId)return true;
+ }
+ return false;
 }

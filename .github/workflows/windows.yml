@@ -40,7 +40,15 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm test
+      - name: Run unit tests
+        shell: pwsh
+        run: |
+          & npm test 2>&1 | Tee-Object -Variable unitOutput
+          if ($LASTEXITCODE -ne 0) {
+            $diagnosis = (($unitOutput | Select-Object -Last 70) -join "`n") -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+            Write-Host "::error title=Unit test failure::$diagnosis"
+            exit 1
+          }
       - run: npm run build
       - name: Launch and check the real desktop application
         run: npm run test:desktop
