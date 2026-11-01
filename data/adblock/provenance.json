@@ -1,0 +1,124 @@
+{
+  "engine": "@ghostery/adblocker@2.20.3",
+  "generatedAt": "2026-11-01T07:40:07.634Z",
+  "revisions": {
+    "ghostery/adblocker": "6f0610bf5eec1f31c4975ce0e707cdf47023e5b5",
+    "easylist/ruadlist": "e795e087055a9d0f881462514c94796a7f06755b",
+    "uBlockOrigin/uAssets": "64630b0fd7144fb752427fb7f4a1f0695f3b66d3"
+  },
+  "sources": [
+    {
+      "file": "easylist-easylist.txt",
+      "url": "https://raw.githubusercontent.com/ghostery/adblocker/6f0610bf5eec1f31c4975ce0e707cdf47023e5b5/packages/adblocker/assets/easylist/easylist.txt",
+      "sha256": "318f849794a94697a04d470f6162523befd43ce58d2477d4e321f727cbbb0ccd"
+    },
+    {
+      "file": "easylist-easyprivacy.txt",
+      "url": "https://raw.githubusercontent.com/ghostery/adblocker/6f0610bf5eec1f31c4975ce0e707cdf47023e5b5/packages/adblocker/assets/easylist/easyprivacy.txt",
+      "sha256": "d0b04edb90a4e9ef6f3a371d08a9afd90057a22abe843586409fe08edfa89262"
+    },
+    {
+      "file": "ublock-origin-filters.txt",
+      "url": "https://raw.githubusercontent.com/ghostery/adblocker/6f0610bf5eec1f31c4975ce0e707cdf47023e5b5/packages/adblocker/assets/ublock-origin/filters.txt",
+      "sha256": "f64eb22a4421a0813adcb04afd8739cdc0ad9de9842dc0178feb05d917becf14"
+    },
+    {
+      "file": "ublock-origin-quick-fixes.txt",
+      "url": "https://raw.githubusercontent.com/ghostery/adblocker/6f0610bf5eec1f31c4975ce0e707cdf47023e5b5/packages/adblocker/assets/ublock-origin/quick-fixes.txt",
+      "sha256": "61d766e66cf971d417e105f0b0ad869f80ef28ed407028f9555332bdd3fc0822"
+    },
+    {
+      "file": "ublock-origin-unbreak.txt",
+      "url": "https://raw.githubusercontent.com/ghostery/adblocker/6f0610bf5eec1f31c4975ce0e707cdf47023e5b5/packages/adblocker/assets/ublock-origin/unbreak.txt",
+      "sha256": "d06b9a46309f8d2555b69f9c2e789e61299ecec0f947c5cf13ce5e5febb5a22e"
+    },
+    {
+      "file": "ru-RuAdList-uBO.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/RuAdList-uBO.txt",
+      "sha256": "2778f23ef116e555094f501b0eb6e474bd84cd8ee1521dd71aff8447d47e2487"
+    },
+    {
+      "file": "ru-advblock-adservers.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/adservers.txt",
+      "sha256": "8a58200e11843c0d69ea6d3cb4a47ac5da5c5cc29fa1c1835e1494f1963ac559"
+    },
+    {
+      "file": "ru-advblock-first_level.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/first_level.txt",
+      "sha256": "ac2b34e1ba94e343ec5a3ad8b645d1f87d609372989ecdd92f25b2462bb46668"
+    },
+    {
+      "file": "ru-advblock-general_block.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/general_block.txt",
+      "sha256": "de5c8c9e911ef6262bacb8f4ae6532e6b94f84af48f0102d28a7d69400d51241"
+    },
+    {
+      "file": "ru-advblock-general_hide.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/general_hide.txt",
+      "sha256": "7fd5317237d604876b2f9179d121dc5d9cee132b99124c73ded6feb7b070e770"
+    },
+    {
+      "file": "ru-advblock-popup.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/popup.txt",
+      "sha256": "e2bbae830628b2405b4d9162781681ec2ca16c863f9587cf6ad41f7b92c564ca"
+    },
+    {
+      "file": "ru-advblock-specific_antisocial.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/specific_antisocial.txt",
+      "sha256": "625be74ccdac6d67a2166d089d06d50499f948976f1271895b870f789d424849"
+    },
+    {
+      "file": "ru-advblock-specific_block.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/specific_block.txt",
+      "sha256": "c65f7819b26a8785a39a9fa914d3a69e37902d97cb1458afc3f3f781dd1acb44"
+    },
+    {
+      "file": "ru-advblock-specific_hide.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/specific_hide.txt",
+      "sha256": "85bf5d746f5625656e5dae1bc909d627da47b5d942f33c0b9cb4afbe64668b32"
+    },
+    {
+      "file": "ru-advblock-specific_special.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/specific_special.txt",
+      "sha256": "6c3720335c011576f6565c18350089be32db30f8d8c06911f5ea9c625b3dda70"
+    },
+    {
+      "file": "ru-advblock-thirdparty.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/thirdparty.txt",
+      "sha256": "685a1cdd76076c55404aea7dcba7458067c07f462f23018bd62949f31546812f"
+    },
+    {
+      "file": "ru-advblock-whitelist.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/advblock/whitelist.txt",
+      "sha256": "4c39f4a8a923a2986f250a87304dc4423da51870f68f388d1a2ebcf1238b0a6e"
+    },
+    {
+      "file": "ru-css-fixes-experimental.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/css-fixes-experimental.txt",
+      "sha256": "e08393b39e539252409712dc284cf4322e071775bd16cf73e5afcc309ffd17b8"
+    },
+    {
+      "file": "ru-js-fixes-experimental.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/js-fixes-experimental.txt",
+      "sha256": "ae0e6871f965ede9100665b85e6be96eadf7ee4876d10fb7032ddaad66e15b37"
+    },
+    {
+      "file": "ru-AWRL-non-sync.txt",
+      "url": "https://raw.githubusercontent.com/easylist/ruadlist/e795e087055a9d0f881462514c94796a7f06755b/AWRL-non-sync.txt",
+      "sha256": "e5267553381da4ea86d1923b4280b16591aad6017e0d99bd292a521781d5aad3"
+    },
+    {
+      "file": "resources.json",
+      "url": "https://raw.githubusercontent.com/ghostery/adblocker/6f0610bf5eec1f31c4975ce0e707cdf47023e5b5/packages/adblocker/assets/ublock-origin/resources.json",
+      "sha256": "5ce0ce483f0e5514308ccb0240960a9dd7bfeab417debeef96960dce2c95f690"
+    },
+    {
+      "file": "LICENSE-uAssets.txt",
+      "url": "https://raw.githubusercontent.com/uBlockOrigin/uAssets/64630b0fd7144fb752427fb7f4a1f0695f3b66d3/LICENSE",
+      "sha256": "589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2"
+    }
+  ],
+  "ownRulesSha256": "03069d6733a083712953358365fa44c3a3bf880ee858bc96a228b5c1cce39deb",
+  "binarySha256": "2145c07d7ccecfadfd10aa66f956e4b754f5c8460d72e083aaa9956dfb709ac9",
+  "binaryBytes": 5345341
+}

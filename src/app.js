@@ -453,6 +453,7 @@ function episodeButtons() {
     $('#episode-list').append(button);
   }
   $('#next-button').disabled = active.title.episodes.indexOf(active.episode) === active.title.episodes.length - 1;
+  $('#next-button').title=$('#next-button').disabled?(active.title.episodes.length===1?'У этого релиза одна серия':'Последняя доступная серия'):'Следующая серия';
 }
 function openTitle(title) {
   if(title.discovery){setMediaKind(title.discovery.media);cinema.playSaved(title);return;}
@@ -470,7 +471,7 @@ function startEpisode(title, episode, time, session = {}) {
   $('#playing-title').textContent = title.discovery?.media==='movie'?title.title:`${title.title} · ${episode.season ? `Сезон ${episode.season} · ` : ''}Серия ${episode.number}`;
   $('#quality').value = String(active.quality); $('#watch-audio-mode').value = active.watching.audioMode; $('#retry-button').hidden = true; episodeButtons();
   for (const option of $('#quality').options) option.disabled = Boolean(title.catalog||title.discovery) && !episode.sources.some(source => source.quality === Number(option.value));
-  for (const option of $('#watch-audio-mode').options) option.disabled = !episode.sources.some(source => option.value === 'original' ? source.audioType === 'original' : source.audioType !== 'original' && source.language === 'ru');
+  for (const option of $('#watch-audio-mode').options) option.disabled = !(title.catalog&&option.value==='original')&&!episode.sources.some(source => option.value === 'original' ? source.audioType === 'original' : source.audioType !== 'original' && source.language === 'ru');
   $('#return-player').hidden = view === 'watch';
   Object.defineProperty(state.progress, title.id, { value: { episodeId: episode.id, time, updatedAt: Date.now() }, writable: true, enumerable: true, configurable: true }); persist(true); lastSave = Date.now();
   setFocusMode(preferences.interface.cinema);
@@ -489,7 +490,7 @@ function nextEpisode() {
   const next = active.title.episodes[active.title.episodes.indexOf(active.episode) + 1];
   if (next && active.title.catalog && Date.now() - (catalogFreshness.get(active.title.id) || 0) > 300000) discovery.playSaved(active.title, { episodeId: next.id });
   else if (next) startEpisode(active.title, next, 0, active.title.catalog ? { quality: bestCatalogQuality(next, state.quality), audioMode: active.watching.audioMode } : {});
-  else status(active.title.discovery?.media==='movie'?'Фильм закончился.':'Все доступные серии просмотрены.');
+  else status(active.title.discovery?.media==='movie'?'Фильм закончился.':active.title.episodes.length===1?'Просмотр закончен. У этого релиза одна серия.':'Все доступные серии просмотрены.');
 }
 
 async function startSource(retryDeadline) {
@@ -643,7 +644,7 @@ window.addEventListener('offline', () => toast('Нет соединения. П�
 window.addEventListener('online', () => { toast('Соединение восстановлено.'); if (active && !plan?.current) startEpisode(active.title, active.episode, resumeAt); });
 viewing = viewingControls({ $, node, preferences, persist, savePreferences: storePreferences, toast, active: () => active, video: () => video, hls: () => hls, currentSource: () => plan?.current, restart: restartSource,online:()=>online });
 function refreshOnlineControls(){
- if(!active)return;for(const option of $('#watch-audio-mode').options)option.disabled=!active.episode.sources.some(source=>option.value==='original'?source.audioType==='original':source.audioType!=='original'&&source.language==='ru')&&!(online?.players()||[]).some(player=>player.audioType===option.value);
+ if(!active)return;for(const option of $('#watch-audio-mode').options)option.disabled=!(active.title.catalog&&option.value==='original')&&!active.episode.sources.some(source=>option.value==='original'?source.audioType==='original':source.audioType!=='original'&&source.language==='ru')&&!(online?.players()||[]).some(player=>player.audioType===option.value);
  viewing?.sources();viewing?.subtitles();
 }
 online=onlinePlayback({$,node,active:()=>active,video:()=>video,persist,enter(){recordProgress(true);if(video)resumeAt=video.currentTime||resumeAt;stopMedia();active.checkpoint=resumeAt;},refresh:refreshOnlineControls,status,onTime(time){if(!active)return;resumeAt=time;active.checkpoint=time;if(Date.now()-lastSave>3000){state.progress[active.title.id]={episodeId:active.episode.id,time,updatedAt:Date.now()};lastSave=Date.now();persist(true);}},onEnded(){if(preferences.autoNext)nextEpisode();else status('Серия закончилась.');}});

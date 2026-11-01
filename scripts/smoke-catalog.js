@@ -11,7 +11,7 @@ export async function smokeCatalog({ application, page, root }) {
     const previous=net.fetch;globalThis.__catalogRequests=[];
     net.fetch=async(url,options)=>{
       if((String(url).startsWith('https://old.yummyani.me/api/')||String(url).startsWith('https://api.yani.tv/')))return new Response(JSON.stringify({response:[]}));
-      if(String(url).startsWith('https://anidb.net/anime/')||String(url).startsWith('https://api.jikan.moe/'))return new Response('Controlled unavailable',{status:503});
+      if(String(url).startsWith('https://anidb.net/anime/')||String(url).startsWith('https://api.jikan.moe/')||String(url)==='https://graphql.anilist.co')return new Response('Controlled unavailable',{status:503});
       if(!/^https:\/\/(anilibria|aniliberty)\.top\/api\/v1\/anime\//.test(url))return previous(url,options);
       globalThis.__catalogRequests.push(url);
       if(options.credentials!=='omit'||options.redirect!=='error')throw new Error('Unsafe catalog transport options');

@@ -1,3 +1,4 @@
+import {requestAniListCast} from './anilist-cast.js';
 import {readFile} from 'node:fs/promises';
 import {boundedText} from '../src/subtitles.js';
 import {yummyPlayers} from '../src/anime-online.js';
@@ -20,7 +21,7 @@ async function cached(url,{fetcher,signal,html=false,ttl=120000}){
 export async function requestAnimeAutomatic(data,{fetcher=globalThis.fetch,signal}={}){
  if(!data||!['anime-options','anime-cast','anime-episodes'].includes(data.kind)||data.provider!==undefined&&!['anilibria','yummyani'].includes(data.provider)||!Number.isSafeInteger(data.releaseId)||data.releaseId<1||data.kind==='anime-options'&&(!Number.isFinite(data.number)||data.number<0||data.number>100000))throw new Error('Не удалось определить выбранное аниме и серию.');
  if(data.castSource!==undefined&&(data.kind!=='anime-cast'||data.castSource!=='jikan'))throw new Error('Неизвестный каталог персонажей.');
- const total=signal?AbortSignal.any([signal,AbortSignal.timeout(data.kind==='anime-cast'?28000:18000)]):AbortSignal.timeout(data.kind==='anime-cast'?28000:18000);
+ const total=signal?AbortSignal.any([signal,AbortSignal.timeout(data.kind==='anime-cast'?35000:18000)]):AbortSignal.timeout(data.kind==='anime-cast'?35000:18000);
  let raw,yummy;
  if(data.provider==='yummyani'){
   const result=await yummyRequest(`/anime/${data.releaseId}`,{fetcher,signal:total});yummy=result.response;
@@ -53,10 +54,15 @@ export async function requestAnimeAutomatic(data,{fetcher=globalThis.fetch,signa
    const phase=AbortSignal.any([total,AbortSignal.timeout(8000)]);
    const detail=await cached(`https://api.jikan.moe/v4/anime/${identity.malId}/full`,{fetcher,signal:phase,ttl:86400000});
    const verified=await resolveAnimeIdentity({year:raw.year,mal:{id:detail.data?.mal_id},name:{main:detail.data?.title,english:detail.data?.title_english}});
-   if(!verified||verified.anidbId!==identity.anidbId||detail.data?.aired?.prop?.from?.year!==raw.year)throw new Error('Другой релиз');
+   if(!verified||verified.anidbId!==identity.anidbId||detail.data?.mal_id!==identity.malId)throw new Error('Другой релиз');
    const cast=await cached(`https://api.jikan.moe/v4/anime/${identity.malId}/characters`,{fetcher,signal:phase,ttl:86400000});
    return {id:identity.anidbId,fallback:{malId:identity.malId,title:detail.data.title,characters:cast.data}};
-  }catch{throw new Error('AniDB и резервный каталог персонажей сейчас недоступны. Сохранённый каст остаётся на устройстве.');}
+  }catch{total.throwIfAborted();}
+  try{
+   const anilist=await requestAniListCast(identity,{fetcher,signal:AbortSignal.any([total,AbortSignal.timeout(8000)]),verify:async title=>{
+    for(const name of Object.values(title||{})){if(!name)continue;const candidate=await resolveAnimeIdentity({year:raw.year,mal:{id:identity.malId},name:{main:name}});if(candidate?.anidbId===identity.anidbId)return true;}return false;
+   }});return {id:identity.anidbId,anilist};
+  }catch{throw new Error('AniDB и резервный каталог персонажей (MyAnimeList / AniList) сейчас недоступны. Сохранённый каст остаётся на устройстве.');}
  }
  if(yummy)return {players:yummyPlayers(await yummyRequest(`/anime/${data.releaseId}/videos`,{fetcher,signal:total}),data.number),anidbId:identity?.anidbId||null,yummyId:data.releaseId};
 

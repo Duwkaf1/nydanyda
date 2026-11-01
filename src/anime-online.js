@@ -57,3 +57,13 @@ export function parseJikanCast(raw,expectedId){
  });if(!characters.length)throw new Error('Резервный каталог вернул пустой каст.');
  return {id:expectedId,title:String(raw.title||'').slice(0,200),source:'MyAnimeList',characters,episodes:[],updatedAt:Date.now()};
 }
+
+export function parseAniListCast(raw,expectedId){
+ if(!Number.isSafeInteger(expectedId)||expectedId<1||!Number.isSafeInteger(raw?.malId)||!Array.isArray(raw.characters))throw new Error('AniList не подтвердил персонажей.');
+ const seen=new Set();const characters=raw.characters.slice(0,200).flatMap(entry=>{
+  const character=entry?.node;if(!Number.isSafeInteger(character?.id)||character.id<1||character.id>=1000000000||typeof character.name?.full!=='string'||!character.name.full.trim()||seen.has(character.id))return [];seen.add(character.id);
+  let imageUrl;try{const url=new URL(character.image?.large);if(url.protocol==='https:'&&url.hostname==='s4.anilist.co'&&!url.port&&/^\/file\/anilistcdn\/character\/(?:large|medium)\//.test(url.pathname))imageUrl=url.href;}catch{}
+  return [{id:2000000000+character.id,name:character.name.full.slice(0,200),role:entry.role==='MAIN'?'main character in':entry.role==='SUPPORTING'?'secondary cast in':'appears in',...(imageUrl?{imageUrl}:{}),actors:(Array.isArray(entry.voiceActors)?entry.voiceActors:[]).filter(a=>typeof a?.name?.full==='string').slice(0,20).map(a=>({id:null,name:a.name.full.slice(0,160)}))}];
+ });if(!characters.length)throw new Error('AniList вернул пустой состав.');
+ return {id:expectedId,title:String(raw.title||'').slice(0,200),source:'AniList',characters,episodes:[],updatedAt:Date.now()};
+}

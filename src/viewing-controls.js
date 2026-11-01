@@ -34,6 +34,7 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     return [...external, ...embedded].filter(track => preferences.watching.subtitleFormat === 'all' || track.format === preferences.watching.subtitleFormat);
   }
   function selectTrack() {
+    if($('#subtitle-selector').value==='find-online-subs'){online()?.chooseSubtitles();return;}
     if($('#subtitle-selector').value.startsWith('online:')){online()?.select($('#subtitle-selector').value.slice(7));return;}
     const selected = tracks().find(track => track.id === $('#subtitle-selector').value);
     const authored = ['ass', 'ssa'].includes(selected?.format);
@@ -51,7 +52,7 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
   }
   function subtitles() {
     const external=online()?.current();const webTracks=(online()?.players()||[]).filter(p=>p.subtitles);
-    if(external){for(const selector of ['#subtitle-format','#subtitle-size','#subtitle-background','#subtitle-delay'])$(selector).disabled=true;$('#subtitle-selector').replaceChildren(...(external.subtitles?[]:[option('off','Перевод в плеере')]),...webTracks.map(p=>option(`online:${p.id}`,`${p.voice} · ${p.player}`)));$('#subtitle-selector').value=external.subtitles?`online:${external.id}`:'off';report(external.subtitles?`${external.voice} · оформление выбирается внутри плеера`:'Субтитры управляются выбранным плеером.');return;}
+    if(external){for(const selector of ['#subtitle-format','#subtitle-size','#subtitle-background','#subtitle-delay'])$(selector).disabled=true;$('#subtitle-selector').replaceChildren(...(external.subtitles?[]:[option('off','Перевод в плеере')]),...webTracks.map(p=>option(`online:${p.id}`,`${p.voice} · ${p.player}`)));if(!webTracks.length)$('#subtitle-selector').append(option('find-online-subs','Найти оригинал с субтитрами…'));$('#subtitle-selector').value=external.subtitles?`online:${external.id}`:'off';report(external.subtitles?`${external.voice} · оформление выбирается внутри плеера`:'Субтитры управляются выбранным плеером.');return;}
     $('#subtitle-format').disabled=false;
     const choices = tracks(); const preferred = preferences.watching.subtitleVariant;
     const saved = preferences.watching.subtitleSelection; const value = active();
@@ -59,9 +60,10 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     const chosen = preferred === 'off' ? null : exact || choices.find(track => track.label === preferred) || (value?.watching.audioMode === 'original' ? choices.find(track => track.language === preferences.watching.subtitleLanguage) : null);
     $('#subtitle-selector').replaceChildren(option('off', 'Без субтитров'), ...choices.map(track => option(track.id, `${track.label}${track.language !== 'ru' ? ` · ${languageName(track.language)}` : ''}${choices.filter(item => item.label === track.label).length > 1 ? ` · ${subtitleKind(track.format)}` : ''}`)));
     for(const player of webTracks)$('#subtitle-selector').append(option(`online:${player.id}`,`${player.voice} · ${player.player}${player.quality?` · до ${player.quality}p`:""}`));
+    if(value?.title.catalog&&!webTracks.length)$('#subtitle-selector').append(option('find-online-subs','Найти оригинал с субтитрами…'));
     $('#subtitle-selector').value = chosen?.id || 'off'; selectTrack();
     if (!controller && active()?.episode.webPlayers?.length) report('Перевод сайта выбирается в его отдельном окне.');
-    else if (!choices.length && active()?.watching.audioMode === 'original') report('Нет подходящего перевода. Добавь его в параметрах просмотра.');
+    else if (!choices.length && active()?.watching.audioMode === 'original') report(value?.title.catalog?'Выбери «Найти оригинал с субтитрами», чтобы проверить другие плееры.':'Нет подходящего перевода. Добавь его в параметрах просмотра.');
     else if (!controller) report('Субтитры выключены.');
   }
   const changeSource = async event => {
@@ -79,6 +81,7 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
   };
   $('#source-player').onchange=changeSource;$('#quick-source').onchange=changeSource;
   $('#subtitle-selector').onchange = () => {
+    if($('#subtitle-selector').value==='find-online-subs'){online()?.chooseSubtitles();return;}
     if($('#subtitle-selector').value.startsWith('online:')){online()?.select($('#subtitle-selector').value.slice(7));return;}
     rememberTrack(tracks().find(track => track.id === $('#subtitle-selector').value));
     savePreferences(); selectTrack();

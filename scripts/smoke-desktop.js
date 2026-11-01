@@ -1,3 +1,4 @@
+import {smokeAdblock} from './smoke-adblock.js';
 import {smokeAutomatic} from './smoke-automatic.js';
 import { _electron as electron } from '@playwright/test';
 import { createRequire } from 'node:module';
@@ -242,6 +243,7 @@ try {
   assert.equal(await sourcePage.evaluate(() => typeof window.kadr), 'undefined');
   assert.equal(await sourcePage.evaluate(() => typeof window.require), 'undefined');
   await smokeCatalog({application,page,root});
+  await smokeAdblock({application,page,root});
   await smokeAutomatic({application,page,root});
   await smokeCinema({application,page,root});
   assert.deepEqual(errors, []);

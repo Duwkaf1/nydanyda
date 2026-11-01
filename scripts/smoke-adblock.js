@@ -1,0 +1,22 @@
+import {readFile} from 'node:fs/promises';import path from 'node:path';import assert from 'node:assert/strict';
+export async function smokeAdblock({application,root}){
+ const bytes=Array.from(await readFile(path.join(root,'test/fixtures/playback/tone.mp4')));
+ await application.evaluate(async({BrowserWindow,session},{bytes})=>{
+  const isolated=session.fromPartition('yoru-adblock-proof');globalThis.__adProof={forbidden:[],errors:[],redirects:[]};isolated.webRequest.onErrorOccurred(d=>globalThis.__adProof.errors.push({url:d.url.slice(0,160),error:d.error}));isolated.webRequest.onBeforeRedirect(d=>globalThis.__adProof.redirects.push({url:d.url.slice(0,160),target:d.redirectURL.slice(0,70)}));const video=Buffer.from(bytes);
+  await isolated.protocol.handle('https',request=>{
+   const u=new URL(request.url);if(u.hostname!=='kodik.info'){globalThis.__adProof.forbidden.push(u.href);return new Response('Advertising must not reach this handler',{status:500});}
+   if(u.pathname==='/proof.mp4'){const range=request.headers.get('range')?.match(/^bytes=(\d+)-(\d*)$/);const start=range?Number(range[1]):0,end=range?.[2]?Math.min(Number(range[2]),video.length-1):video.length-1;return new Response(video.subarray(start,end+1),{status:range?206:200,headers:{'Content-Type':'video/mp4','Accept-Ranges':'bytes',...(range?{'Content-Range':`bytes ${start}-${end}/${video.length}`}:{})}});}
+   if(u.pathname==='/proof.vtt')return new Response('WEBVTT\n\n00:00:00.000 --> 00:00:05.500\nПроверочный перевод\n',{headers:{'Content-Type':'text/vtt'}});
+   return new Response(`<!doctype html><meta charset="utf-8"><div class="ad-banner">Owned advertising overlay</div><video controls src="https://kodik.info/proof.mp4"><track default kind="subtitles" srclang="ru" label="Проверочный перевод" src="https://kodik.info/proof.vtt"></video><script>window.proof={sdk:false,vast:false};</script><script src="https://ad.doubleclick.net/advert.js"></script><script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script><script>proof.sdk=typeof globalThis.google?.ima?.AdsLoader==='function';fetch('https://an.yandex.ru/meta/owned-vast').then(r=>r.text()).then(text=>{proof.vast=new DOMParser().parseFromString(text,'text/xml').documentElement.tagName==='VAST';document.querySelector('video').play();}).catch(e=>proof.error=e.message);window.open('https://ad.doubleclick.net/popup');</script>`,{headers:{'Content-Type':'text/html'}});
+  });
+  const window=new BrowserWindow({show:false,width:800,height:600,webPreferences:{partition:'yoru-adblock-proof',sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true}});globalThis.__adProof.window=window;await window.loadURL('https://kodik.info/serial/protection-proof');
+ },{bytes});
+ const window=application.windows().find(w=>w.url().includes('/serial/protection-proof'));assert.ok(window,'Owned protection fixture opened');
+ try{
+  await window.waitForFunction(()=>window.proof?.sdk&&window.proof?.vast,undefined,{timeout:12000});
+  await window.waitForFunction(()=>{const v=document.querySelector('video');return v.videoHeight===1080&&v.currentTime>0&&v.webkitAudioDecodedByteCount>0&&v.textTracks[0]?.cues?.length>0;},undefined,{timeout:15000});
+  assert.equal(await window.locator('body').evaluate(()=>typeof window.kadr),'undefined');assert.equal(await window.locator('body').evaluate(()=>typeof require),'undefined');assert.equal(await window.locator('.ad-banner').evaluate(e=>getComputedStyle(e).display),'none');
+  const forbidden=await application.evaluate(()=>globalThis.__adProof.forbidden);assert.deepEqual(forbidden,[],'Ad script and VAST request never reach their mocked network destinations');assert.equal(application.windows().filter(w=>w.url().includes('doubleclick')).length,0);
+  console.log('PASS: actual Electron session ad blocking, local IMA/VAST compatibility, cosmetic overlay removal, denied popups, H.264/AAC 1080p and subtitles without external ad traffic');
+ }catch(error){console.log('Adblock diagnostic:',await window.evaluate(()=>({proof:window.proof,sdk:typeof globalThis.google?.ima?.AdsLoader,video:document.querySelector('video')?.readyState})),await application.evaluate(()=>({forbidden:globalThis.__adProof.forbidden,errors:globalThis.__adProof.errors,redirects:globalThis.__adProof.redirects})));throw error;}finally{await application.evaluate(async()=>{const session=globalThis.__adProof.window.webContents.session;globalThis.__adProof.window.destroy();await session.protocol.unhandle('https');}).catch(()=>{});}
+}

@@ -1,0 +1,12 @@
+! Yoru player-specific additions. Source: this repository.
+! Ad SDK gets its maintained compatibility shim, so missing ads do not hang playback.
+||imasdk.googleapis.com/js/sdkloader/ima3.js$script,redirect=google-ima.js
+! Empty valid VAST responses let players complete their advertising phase.
+||adfox.ru^$xmlhttprequest,redirect=noop-vast3.xml,important
+||an.yandex.ru^$xmlhttprequest,redirect=noop-vast3.xml,important
+||adriver.ru^$xmlhttprequest,redirect=noop-vast3.xml,important
+/vast.xml$xmlhttprequest,domain=kodik.info|kodik.cc|kodik.biz|kodik.video|kodik.online|kodikplayer.com|kodikplayer.net|aniqit.com|aniqit.net|aniqit.ru,redirect=noop-vast3.xml,important
+/vast?$xmlhttprequest,domain=kodik.info|kodik.cc|kodik.biz|kodik.video|kodik.online|kodikplayer.com|kodikplayer.net|aniqit.com|aniqit.net|aniqit.ru,redirect=noop-vast3.xml,important
+! Common provider overlays, scoped to players; content and subtitle controls stay visible.
+kodik.info,kodik.cc,kodik.biz,kodik.video,kodik.online,kodikplayer.com,kodikplayer.net,aniqit.com,aniqit.net,aniqit.ru##.ad-banner
+kodik.info,kodik.cc,kodik.biz,kodik.video,kodik.online,kodikplayer.com,kodikplayer.net,aniqit.com,aniqit.net,aniqit.ru##[data-ad-slot]

@@ -13,7 +13,8 @@ export function anidbImage(value) {
 
 export function castImage(value){
   const primary=anidbImage(value);if(primary)return primary;
-  try{const url=new URL(httpsURL(value));if(url.hostname==='cdn.myanimelist.net'&&!url.port&&url.pathname.startsWith('/images/characters/'))return url.href;}catch{}
+  try{const url=new URL(httpsURL(value));if(url.hostname==='s4.anilist.co'&&!url.port&&/^\/file\/anilistcdn\/character\/(?:large|medium)\//.test(url.pathname))return url.href;
+  if(url.hostname==='cdn.myanimelist.net'&&!url.port&&url.pathname.startsWith('/images/characters/'))return url.href;}catch{}
   return undefined;
 }
 

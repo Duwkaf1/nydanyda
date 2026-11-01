@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, net, dialog, shell } from 'electron';
+import {createPlayerProtection} from './player-protection.js';
+import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
@@ -9,6 +10,9 @@ import { boundedText } from '../src/subtitles.js';
 import { uninstallAvailability, uninstallHandler } from './uninstall.js';
 import {probeCinema,openCinemaService,externalCinemaLink} from './cinema-services.js';
 import { requestCatalog } from './catalog-network.js';
+
+// Only immutable, bundled ad-compatibility resources are served by this scheme.
+protocol.registerSchemesAsPrivileged([{scheme:'yoru-adblock',privileges:{standard:true,secure:true,corsEnabled:true,supportFetchAPI:true,bypassCSP:true}}]);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 app.setName('Yoru');
@@ -43,6 +47,8 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (mainWindow?.isMinimized()) mainWindow.restore(); mainWindow?.focus(); });
   app.whenReady().then(() => {
+    const protection=createPlayerProtection();
+    app.on('web-contents-created',(_event,contents)=>protection.protectContents(contents));
     mainWindow = new BrowserWindow({
       width: 1320, height: 900, minWidth: 640, minHeight: 480, title: 'Yoru — кино и аниме', icon: windowIcon, backgroundColor: '#151617', autoHideMenuBar: true,
       webPreferences: { preload: path.join(here, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true },

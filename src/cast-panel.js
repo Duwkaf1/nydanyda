@@ -1,5 +1,5 @@
 import {discoveryRequest} from './discovery-transport.js';
-import {parseAniDBPage,parseJikanCast} from './anime-online.js';
+import {parseAniDBPage,parseJikanCast,parseAniListCast} from './anime-online.js';
 import { parseAniDB, readCastCache, saveCastCache, castForEpisode, anidbPage, anidbReleaseId, characterRole } from './anidb.js';
 import { mergeCastPhotos, validateCharacterPhoto } from './character-photos.js';
 import { characterPhotoPicker } from './character-photo-picker.js';
@@ -38,7 +38,7 @@ export function castPanel({ $, node, active, persist, toast }) {
     if (!known) { $('#cast-status').textContent = value.title.catalog ? autoMessages.get(value.title.id)||'Автоматически загружаем персонажей из AniDB…' : 'Персонажей пока нет. Список можно добавить в настройках.'; return; }
     const perEpisode = $('#cast-scope').value === 'episode';
     const characters = perEpisode ? castForEpisode(data, value.episode.number) : data.characters;
-    $('#cast-status').textContent = perEpisode ? characters === null ? 'Для этой серии данные ещё не отмечены.' : `Серия ${value.episode.number} · отмечено вручную: ${characters.length}` : `${data.source==='MyAnimeList'?'MyAnimeList · ':''}Персонажей: ${characters.length} · имена и заметки можно менять`;
+    $('#cast-status').textContent = perEpisode ? characters === null ? 'Для этой серии данные ещё не отмечены.' : `Серия ${value.episode.number} · отмечено вручную: ${characters.length}` : `${['MyAnimeList','AniList'].includes(data.source)?data.source+' · ':''}Персонажей: ${characters.length} · имена и заметки можно менять`;
     for (const character of [...(characters || [])].sort((a, b) => characterRole(a.role).rank - characterRole(b.role).rank)) {
       const personal = details.attach(character, { titleId: value.title.id, releaseId: data.id, characterId: character.id });
       const card = node('article', undefined, 'cast-card'); const role = characterRole(character.role).label;
@@ -83,12 +83,12 @@ export function castPanel({ $, node, active, persist, toast }) {
     try{
       let result=await discoveryRequest({kind:'anime-cast',provider:value.title.catalog.provider,releaseId:value.title.catalog.releaseId},{signal:autoRequest.signal});if(token!==autoSequence||active()?.title.id!==titleId)return;
       const current=active();if(mapping()?.anidbId&&mapping().anidbId!==result.id)throw new Error('Для этого сезона сохранена собственная страница AniDB. Автоматически её не меняем.');
-      const expectedId=result.id;let data;try{data=result.fallback?parseJikanCast(result.fallback,result.id):parseAniDBPage(result.html,result.id);}catch(error){
-       if(result.fallback)throw error;
+      const expectedId=result.id;let data;try{data=result.anilist?parseAniListCast(result.anilist,result.id):result.fallback?parseJikanCast(result.fallback,result.id):parseAniDBPage(result.html,result.id);}catch(error){
+       if(result.fallback||result.anilist)throw error;
        result=await discoveryRequest({kind:'anime-cast',provider:value.title.catalog.provider,releaseId:value.title.catalog.releaseId,castSource:'jikan'},{signal:autoRequest.signal});
        if(token!==autoSequence||active()?.title.id!==titleId)return;
        if(result.id!==expectedId)throw new Error('Резервный каталог вернул другой релиз.');
-       data=parseJikanCast(result.fallback,result.id);
+       data=result.anilist?parseAniListCast(result.anilist,result.id):parseJikanCast(result.fallback,result.id);
       }current.title.anidbId=result.id;save(mergeCastPhotos(data,cache[result.id]));persist();autoMessages.delete(titleId);render();
     }catch(error){if(token===autoSequence&&!autoRequest.signal.aborted&&active()?.title.id===titleId){autoMessages.set(titleId,(error.message||'Не удалось загрузить персонажей.').replace(/^Error invoking remote method '[^']+': (?:Error: )?/,''));render();if(/подождать перед следующей/.test(error.message)&&rateRetries++<1)retryTimer=setTimeout(()=>{if(active()?.title.id===titleId)ensureAutomatic(true);},5100);}}
     finally{if(token===autoSequence)autoRequest=null;}
