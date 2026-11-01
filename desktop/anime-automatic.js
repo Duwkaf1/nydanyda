@@ -9,9 +9,12 @@ export async function resolveAnimeIdentity(raw){
  if(raw.id===5152&&raw.alias==='black-clover-special'&&raw.year===2016&&raw.episodes?.length===1)return {anidbId:12351,malId:33950,method:'reviewed-release-correction',episodeCount:1};
  crosswalk ||= readFile(new URL('../data/anime-crosswalk.json',import.meta.url),'utf8').then(JSON.parse);
  const index=await crosswalk;const malId=Number(raw.mal?.id);const entry=index.entries[String(malId)];
- if(!entry||entry.year!==raw.year)return null;
+ // MAL 47778 premiered in December 2021; the season index labels it winter
+ // 2022. Keep this reviewed exception exact, with the same indexed title/ID.
+ const reviewedWinterPremiere=malId===47778&&entry?.year===2022&&raw.year===2021;
+ if(!entry||entry.year!==raw.year&&!reviewedWinterPremiere)return null;
  const names=new Set(entry.names.map(normalized));if(![raw.name?.english,raw.name?.main,raw.name?.alternative].some(name=>name&&names.has(normalized(name))))return null;
- return {anidbId:entry.anidbId,malId,method:'exact-mal-year-title',episodeCount:entry.episodes};
+ return {anidbId:entry.anidbId,malId,method:reviewedWinterPremiere?'exact-mal-reviewed-year-title':'exact-mal-year-title',episodeCount:entry.episodes};
 }
 async function cached(url,{fetcher,signal,html=false,ttl=120000}){
  signal.throwIfAborted();const old=entries.get(url);if(old&&Date.now()-old.time<ttl)return old.value;

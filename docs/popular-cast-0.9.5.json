@@ -1,0 +1,578 @@
+{
+  "checkedAt": "2026-11-01T12:58:41.625Z",
+  "metadataEvidence": "live_catalog",
+  "wikiDataRequested": false,
+  "searches": [
+    {
+      "query": "Наруто",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%9D%D0%B0%D1%80%D1%83%D1%82%D0%BE",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        1735,
+        34566
+      ],
+      "total": 2
+    },
+    {
+      "query": "Naruto",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=Naruto",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        1735,
+        28755,
+        34566
+      ],
+      "total": 3
+    },
+    {
+      "query": "Ван Пис",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%92%D0%B0%D0%BD+%D0%9F%D0%B8%D1%81",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        21,
+        62233
+      ],
+      "total": 2
+    },
+    {
+      "query": "Блич",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%91%D0%BB%D0%B8%D1%87",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        269
+      ],
+      "total": 1
+    },
+    {
+      "query": "Bleach",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=Bleach",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        269,
+        63819
+      ],
+      "total": 2
+    },
+    {
+      "query": "Атака титанов",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%90%D1%82%D0%B0%D0%BA%D0%B0+%D1%82%D0%B8%D1%82%D0%B0%D0%BD%D0%BE%D0%B2",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        50197
+      ],
+      "total": 1
+    },
+    {
+      "query": "Shingeki no Kyojin",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=Shingeki+no+Kyojin",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        21843,
+        30736,
+        34642,
+        31374
+      ],
+      "total": 4
+    },
+    {
+      "query": "Гигантов",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%93%D0%B8%D0%B3%D0%B0%D0%BD%D1%82%D0%BE%D0%B2",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        31374
+      ],
+      "total": 1
+    },
+    {
+      "query": "Клинок",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%9A%D0%BB%D0%B8%D0%BD%D0%BE%D0%BA",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        22547,
+        30679,
+        38000,
+        39806,
+        40456,
+        47778,
+        49926,
+        51019,
+        55701,
+        58216,
+        59192,
+        47398,
+        50184,
+        22297
+      ],
+      "total": 14
+    },
+    {
+      "query": "Магическая битва",
+      "attempts": [
+        {
+          "url": "https://anilibria.top/api/v1/anime/catalog/releases?limit=24&page=1&f%5Bsorting%5D=RATING_DESC&f%5Bsearch%5D=%D0%9C%D0%B0%D0%B3%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F+%D0%B1%D0%B8%D1%82%D0%B2%D0%B0",
+          "status": 200
+        }
+      ],
+      "returnedMalIds": [
+        40748,
+        48561,
+        51009,
+        57658,
+        31845,
+        56449,
+        19769,
+        24455
+      ],
+      "total": 8
+    }
+  ],
+  "releases": [
+    {
+      "id": 413,
+      "alias": "naruto-shippuuden-naruto-uragannye-khroniki",
+      "name": {
+        "main": "Наруто Ураганные хроники",
+        "english": "Naruto: Shippuuden",
+        "alternative": null
+      },
+      "year": 2007,
+      "mal": {
+        "id": 1735
+      },
+      "type": "TV",
+      "episodes_total": 450,
+      "identity": {
+        "anidbId": 4880,
+        "malId": 1735,
+        "method": "exact-mal-year-title",
+        "episodeCount": 500
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 10290,
+      "alias": "one-piece",
+      "name": {
+        "main": "Ван-Пис",
+        "english": "One Piece",
+        "alternative": null
+      },
+      "year": 1999,
+      "mal": {
+        "id": 21
+      },
+      "type": "TV",
+      "episodes_total": null,
+      "identity": {
+        "anidbId": 69,
+        "malId": 21,
+        "method": "exact-mal-year-title",
+        "episodeCount": 1168
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 8452,
+      "alias": "bleach",
+      "name": {
+        "main": "Блич",
+        "english": "Bleach",
+        "alternative": "отбеливатель, белизна, bleach"
+      },
+      "year": 2004,
+      "mal": {
+        "id": 269
+      },
+      "type": "TV",
+      "episodes_total": 366,
+      "identity": {
+        "anidbId": 2369,
+        "malId": 269,
+        "method": "exact-mal-year-title",
+        "episodeCount": 366
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 8325,
+      "alias": "kimetsu-no-yaiba",
+      "name": {
+        "main": "Клинок, рассекающий демонов",
+        "english": "Kimetsu no Yaiba",
+        "alternative": "Убийца демонов"
+      },
+      "year": 2019,
+      "mal": {
+        "id": 38000
+      },
+      "type": "TV",
+      "episodes_total": 26,
+      "identity": {
+        "anidbId": 14107,
+        "malId": 38000,
+        "method": "exact-mal-year-title",
+        "episodeCount": 26
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 9002,
+      "alias": "kimetsu-no-yaiba-movie-mugen-ressha-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Бесконечный Поезд",
+        "english": "Kimetsu no Yaiba Movie: Mugen Ressha-hen",
+        "alternative": "Истребитель Демонов: Поезд Бесконечный"
+      },
+      "year": 2020,
+      "mal": {
+        "id": 40456
+      },
+      "type": "MOVIE",
+      "episodes_total": null,
+      "identity": {
+        "anidbId": 15113,
+        "malId": 40456,
+        "method": "exact-mal-year-title",
+        "episodeCount": 1
+      },
+      "episodeMode": "single_release_cast",
+      "castDataFetched": false
+    },
+    {
+      "id": 9093,
+      "alias": "kimetsu-no-yaiba-yuukaku-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Квартал Красных Фонарей",
+        "english": "Kimetsu no Yaiba: Yuukaku-hen",
+        "alternative": null
+      },
+      "year": 2021,
+      "mal": {
+        "id": 47778
+      },
+      "type": "TV",
+      "episodes_total": 11,
+      "identity": {
+        "anidbId": 16054,
+        "malId": 47778,
+        "method": "exact-mal-reviewed-year-title",
+        "episodeCount": 11
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 9103,
+      "alias": "kimetsu-no-yaiba-mugen-ressha-hen-tv",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Бесконечный Поезд (ТВ)",
+        "english": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)",
+        "alternative": null
+      },
+      "year": 2021,
+      "mal": {
+        "id": 49926
+      },
+      "type": "TV",
+      "episodes_total": null,
+      "identity": {
+        "anidbId": 16803,
+        "malId": 49926,
+        "method": "exact-mal-year-title",
+        "episodeCount": 7
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 9406,
+      "alias": "kimetsu-no-yaiba-katanakaji-no-sato-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Деревня Кузнецов",
+        "english": "Kimetsu no Yaiba: Katanakaji no Sato-hen",
+        "alternative": "Клинок рассекающий демонов Истребитель демонов"
+      },
+      "year": 2023,
+      "mal": {
+        "id": 51019
+      },
+      "type": "TV",
+      "episodes_total": 11,
+      "identity": {
+        "anidbId": 17198,
+        "malId": 51019,
+        "method": "exact-mal-year-title",
+        "episodeCount": 11
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 9660,
+      "alias": "kimetsu-no-yaiba-hashira-geiko-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Тренировка Хашира",
+        "english": "Kimetsu no Yaiba: Hashira Geiko-hen",
+        "alternative": "Истребитель Демонов: Тренировка Столпов, Клинок рассекающий демонов тренировка столпов"
+      },
+      "year": 2024,
+      "mal": {
+        "id": 55701
+      },
+      "type": "TV",
+      "episodes_total": 8,
+      "identity": {
+        "anidbId": 18067,
+        "malId": 55701,
+        "method": "exact-mal-year-title",
+        "episodeCount": 8
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 8789,
+      "alias": "jujutsu-kaisen",
+      "name": {
+        "main": "Магическая битва",
+        "english": "Jujutsu Kaisen",
+        "alternative": null
+      },
+      "year": 2020,
+      "mal": {
+        "id": 40748
+      },
+      "type": "TV",
+      "episodes_total": 24,
+      "identity": {
+        "anidbId": 15275,
+        "malId": 40748,
+        "method": "exact-mal-year-title",
+        "episodeCount": 24
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 9313,
+      "alias": "jujutsu-kaisen-0-movie",
+      "name": {
+        "main": "Магическая битва 0 Фильм",
+        "english": "Jujutsu Kaisen 0 Movie",
+        "alternative": "Магическая, Битва, 0"
+      },
+      "year": 2021,
+      "mal": {
+        "id": 48561
+      },
+      "type": "MOVIE",
+      "episodes_total": 1,
+      "identity": {
+        "anidbId": 16169,
+        "malId": 48561,
+        "method": "exact-mal-year-title",
+        "episodeCount": 1
+      },
+      "episodeMode": "single_release_cast",
+      "castDataFetched": false
+    },
+    {
+      "id": 9470,
+      "alias": "jujutsu-kaisen-season-2",
+      "name": {
+        "main": "Магическая битва 2",
+        "english": "JUJUTSU KAISEN Season 2",
+        "alternative": null
+      },
+      "year": 2023,
+      "mal": {
+        "id": 51009
+      },
+      "type": "TV",
+      "episodes_total": 23,
+      "identity": {
+        "anidbId": 17196,
+        "malId": 51009,
+        "method": "exact-mal-year-title",
+        "episodeCount": 23
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    },
+    {
+      "id": 10088,
+      "alias": "jujutsu-kaisen-shimetsu-kaiyuu-zenpen",
+      "name": {
+        "main": "Магическая битва 3",
+        "english": "Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen",
+        "alternative": null
+      },
+      "year": 2026,
+      "mal": {
+        "id": 57658
+      },
+      "type": "TV",
+      "episodes_total": 12,
+      "identity": {
+        "anidbId": 18363,
+        "malId": 57658,
+        "method": "exact-mal-year-title",
+        "episodeCount": 12
+      },
+      "episodeMode": "unsupported",
+      "castDataFetched": false
+    }
+  ],
+  "families": [
+    {
+      "name": "Наруто",
+      "expectedMalIds": [
+        20,
+        1735
+      ],
+      "foundReleaseIds": [
+        413
+      ],
+      "missingMalIds": [
+        20
+      ],
+      "appearanceCandidateHost": "naruto.fandom.com",
+      "wikiNetwork": "blocked_by_environment_policy"
+    },
+    {
+      "name": "One Piece",
+      "expectedMalIds": [
+        21
+      ],
+      "foundReleaseIds": [
+        10290
+      ],
+      "missingMalIds": [],
+      "appearanceCandidateHost": "onepiece.fandom.com",
+      "wikiNetwork": "blocked_by_environment_policy"
+    },
+    {
+      "name": "Блич",
+      "expectedMalIds": [
+        269,
+        41467,
+        53998,
+        56784
+      ],
+      "foundReleaseIds": [
+        8452
+      ],
+      "missingMalIds": [
+        41467,
+        53998,
+        56784
+      ],
+      "appearanceCandidateHost": "bleach.fandom.com",
+      "wikiNetwork": "blocked_by_environment_policy"
+    },
+    {
+      "name": "Атака титанов",
+      "expectedMalIds": [
+        16498,
+        25777,
+        35760,
+        38524,
+        40028,
+        48583,
+        51535
+      ],
+      "foundReleaseIds": [],
+      "missingMalIds": [
+        16498,
+        25777,
+        35760,
+        38524,
+        40028,
+        48583,
+        51535
+      ],
+      "appearanceCandidateHost": "attackontitan.fandom.com",
+      "wikiNetwork": "blocked_by_environment_policy"
+    },
+    {
+      "name": "Клинок, рассекающий демонов",
+      "expectedMalIds": [
+        38000,
+        40456,
+        47778,
+        49926,
+        51019,
+        55701
+      ],
+      "foundReleaseIds": [
+        8325,
+        9002,
+        9093,
+        9103,
+        9406,
+        9660
+      ],
+      "missingMalIds": [],
+      "appearanceCandidateHost": "kimetsu-no-yaiba.fandom.com",
+      "wikiNetwork": "blocked_by_environment_policy"
+    },
+    {
+      "name": "Магическая битва",
+      "expectedMalIds": [
+        40748,
+        48561,
+        51009,
+        57658
+      ],
+      "foundReleaseIds": [
+        8789,
+        9313,
+        9470,
+        10088
+      ],
+      "missingMalIds": [],
+      "appearanceCandidateHost": "jujutsu-kaisen.fandom.com",
+      "wikiNetwork": "blocked_by_environment_policy"
+    }
+  ]
+}

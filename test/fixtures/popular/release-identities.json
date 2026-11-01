@@ -1,0 +1,214 @@
+{
+  "checkedAt": "2026-11-01T12:55:40.694Z",
+  "source": "live AniLibria catalog/release JSON; metadata only, no video URLs",
+  "releases": [
+    {
+      "id": 413,
+      "alias": "naruto-shippuuden-naruto-uragannye-khroniki",
+      "name": {
+        "main": "Наруто Ураганные хроники",
+        "english": "Naruto: Shippuuden",
+        "alternative": null
+      },
+      "year": 2007,
+      "mal": {
+        "id": 1735
+      },
+      "type": "TV",
+      "episodes_total": 450,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/413"
+    },
+    {
+      "id": 10290,
+      "alias": "one-piece",
+      "name": {
+        "main": "Ван-Пис",
+        "english": "One Piece",
+        "alternative": null
+      },
+      "year": 1999,
+      "mal": {
+        "id": 21
+      },
+      "type": "TV",
+      "episodes_total": null,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/10290"
+    },
+    {
+      "id": 8452,
+      "alias": "bleach",
+      "name": {
+        "main": "Блич",
+        "english": "Bleach",
+        "alternative": "отбеливатель, белизна, bleach"
+      },
+      "year": 2004,
+      "mal": {
+        "id": 269
+      },
+      "type": "TV",
+      "episodes_total": 366,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/8452"
+    },
+    {
+      "id": 8325,
+      "alias": "kimetsu-no-yaiba",
+      "name": {
+        "main": "Клинок, рассекающий демонов",
+        "english": "Kimetsu no Yaiba",
+        "alternative": "Убийца демонов"
+      },
+      "year": 2019,
+      "mal": {
+        "id": 38000
+      },
+      "type": "TV",
+      "episodes_total": 26,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/8325"
+    },
+    {
+      "id": 9002,
+      "alias": "kimetsu-no-yaiba-movie-mugen-ressha-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Бесконечный Поезд",
+        "english": "Kimetsu no Yaiba Movie: Mugen Ressha-hen",
+        "alternative": "Истребитель Демонов: Поезд Бесконечный"
+      },
+      "year": 2020,
+      "mal": {
+        "id": 40456
+      },
+      "type": "MOVIE",
+      "episodes_total": null,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9002"
+    },
+    {
+      "id": 9093,
+      "alias": "kimetsu-no-yaiba-yuukaku-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Квартал Красных Фонарей",
+        "english": "Kimetsu no Yaiba: Yuukaku-hen",
+        "alternative": null
+      },
+      "year": 2021,
+      "mal": {
+        "id": 47778
+      },
+      "type": "TV",
+      "episodes_total": 11,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9093"
+    },
+    {
+      "id": 9103,
+      "alias": "kimetsu-no-yaiba-mugen-ressha-hen-tv",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Бесконечный Поезд (ТВ)",
+        "english": "Kimetsu no Yaiba: Mugen Ressha-hen (TV)",
+        "alternative": null
+      },
+      "year": 2021,
+      "mal": {
+        "id": 49926
+      },
+      "type": "TV",
+      "episodes_total": null,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9103"
+    },
+    {
+      "id": 9406,
+      "alias": "kimetsu-no-yaiba-katanakaji-no-sato-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Деревня Кузнецов",
+        "english": "Kimetsu no Yaiba: Katanakaji no Sato-hen",
+        "alternative": "Клинок рассекающий демонов Истребитель демонов"
+      },
+      "year": 2023,
+      "mal": {
+        "id": 51019
+      },
+      "type": "TV",
+      "episodes_total": 11,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9406"
+    },
+    {
+      "id": 9660,
+      "alias": "kimetsu-no-yaiba-hashira-geiko-hen",
+      "name": {
+        "main": "Клинок, Рассекающий Демонов: Тренировка Хашира",
+        "english": "Kimetsu no Yaiba: Hashira Geiko-hen",
+        "alternative": "Истребитель Демонов: Тренировка Столпов, Клинок рассекающий демонов тренировка столпов"
+      },
+      "year": 2024,
+      "mal": {
+        "id": 55701
+      },
+      "type": "TV",
+      "episodes_total": 8,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9660"
+    },
+    {
+      "id": 8789,
+      "alias": "jujutsu-kaisen",
+      "name": {
+        "main": "Магическая битва",
+        "english": "Jujutsu Kaisen",
+        "alternative": null
+      },
+      "year": 2020,
+      "mal": {
+        "id": 40748
+      },
+      "type": "TV",
+      "episodes_total": 24,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/8789"
+    },
+    {
+      "id": 9313,
+      "alias": "jujutsu-kaisen-0-movie",
+      "name": {
+        "main": "Магическая битва 0 Фильм",
+        "english": "Jujutsu Kaisen 0 Movie",
+        "alternative": "Магическая, Битва, 0"
+      },
+      "year": 2021,
+      "mal": {
+        "id": 48561
+      },
+      "type": "MOVIE",
+      "episodes_total": 1,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9313"
+    },
+    {
+      "id": 9470,
+      "alias": "jujutsu-kaisen-season-2",
+      "name": {
+        "main": "Магическая битва 2",
+        "english": "JUJUTSU KAISEN Season 2",
+        "alternative": null
+      },
+      "year": 2023,
+      "mal": {
+        "id": 51009
+      },
+      "type": "TV",
+      "episodes_total": 23,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/9470"
+    },
+    {
+      "id": 10088,
+      "alias": "jujutsu-kaisen-shimetsu-kaiyuu-zenpen",
+      "name": {
+        "main": "Магическая битва 3",
+        "english": "Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen",
+        "alternative": null
+      },
+      "year": 2026,
+      "mal": {
+        "id": 57658
+      },
+      "type": "TV",
+      "episodes_total": 12,
+      "sourceURL": "https://anilibria.top/api/v1/anime/releases/10088"
+    }
+  ]
+}
