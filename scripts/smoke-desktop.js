@@ -1,3 +1,4 @@
+import {checkFullscreen} from './smoke-fullscreen.js';
 import {smokePlayerMedia} from './smoke-player-media.js';
 import {smokeAdblock} from './smoke-adblock.js';
 import {smokeAutomatic} from './smoke-automatic.js';
@@ -215,6 +216,7 @@ try {
     await page.waitForFunction(()=>document.querySelector('#playback-status').textContent.includes('воспроизведение'));
     await page.locator('#open-player-settings').click(); await page.locator('#player-engine').selectOption(engine); await page.locator('#close-player-settings').click();
     await page.waitForFunction(()=>{const v=document.querySelector('video');return v?.currentTime>.1&&v.videoHeight===1080&&v.webkitAudioDecodedByteCount>0;},undefined,{timeout:15000});
+    if(title.id==='native-mp4')await checkFullscreen({application,page,video:page.locator('video'),label:`${engine} native anime`});
     await page.locator('#watch-audio-mode').selectOption('original');
     await page.waitForFunction(()=>document.querySelector('#playback-status').textContent.includes('Оригинал · 1080p · воспроизведение'));
     await page.getByRole('button',{name:'Закрыть плеер',exact:true}).click();
@@ -246,7 +248,7 @@ try {
   await smokeCatalog({application,page,root});
   await smokeAdblock({application,page,root});
   await smokeAutomatic({application,page,root});
-  await smokePlayerMedia({page});
+  await smokePlayerMedia({application,page});
   await smokeCinema({application,page,root});
   assert.deepEqual(errors, []);
   const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));

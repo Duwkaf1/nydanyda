@@ -1,5 +1,6 @@
+import {checkFullscreen} from './smoke-fullscreen.js';
 import assert from 'node:assert/strict';
-export async function smokePlayerMedia({page}){
+export async function smokePlayerMedia({application,page}){
  // The catalogued wrapper intentionally publishes no player postMessage API.
  // Its content video lives in a different-origin nested iframe.
  await page.route('https://kodik.info/serial/owned-sub1',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><style>html,body{margin:0;width:100%;height:100%;overflow:hidden}iframe{width:100%;height:100%;border:0}</style><iframe src="https://video.sibnet.ru/yoru-owned-player"></iframe>'}));
@@ -7,6 +8,7 @@ export async function smokePlayerMedia({page}){
  await page.getByRole('button',{name:'История',exact:true}).click();await page.getByRole('button',{name:'Смотреть: Arcade Gamer Fubuki',exact:true}).click();await page.waitForSelector('#video-host iframe');
  const nested=page.frameLocator('#video-host iframe').frameLocator('iframe');await nested.locator('video').waitFor();await page.waitForFunction(()=>document.querySelector('.yoru-time')?.textContent.includes('/ 0:06'));
  assert.equal(await nested.locator('body').evaluate(()=>typeof window.kadr),'undefined');assert.equal(await nested.locator('body').evaluate(()=>typeof window.require),'undefined');
+ await checkFullscreen({application,page,video:nested.locator('video'),label:'nested original/subtitle anime iframe'});
  const play=page.getByTestId('yoru-play');if(await play.getAttribute('aria-label')==='Воспроизвести')await play.click();
  await page.waitForFunction(()=>document.querySelector('[data-testid="yoru-play"]')?.getAttribute('aria-label')==='Пауза');
  const decoded=await nested.locator('video').evaluate(v=>({height:v.videoHeight,audio:v.webkitAudioDecodedByteCount}));assert.equal(decoded.height,1080);assert.ok(decoded.audio>0);

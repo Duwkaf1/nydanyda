@@ -1,3 +1,4 @@
+import {matchCinema} from './cinema-match.js';
 import {requestAnimeAutomatic} from './anime-automatic.js';
 import { CATALOG_HOSTS, catalogRequestURL } from '../src/catalog-provider.js';
 import {requestCinema} from './cinema-network.js';
@@ -8,6 +9,7 @@ import { boundedText } from '../src/subtitles.js';
 // fixed public API origins are reachable through this bridge.
 export async function requestCatalog(data, { fetcher = globalThis.fetch, signal } = {}) {
   if(data?.kind==='anime-options'||data?.kind==='anime-cast'||data?.kind==='anime-episodes'||data?.kind==='anime-episode-cast')return requestAnimeAutomatic(data,{fetcher,signal});
+  if(data?.kind==='cinema-match')return matchCinema(data,{fetcher,signal});
   if(data?.kind==='cinema-list'||data?.kind==='cinema-detail'||data?.kind==='cinema-genres')return requestCinema(data,{fetcher,signal});
   catalogRequestURL(data);
   const deadline = AbortSignal.timeout(12000);

@@ -1,6 +1,9 @@
-export const CINEMA_SERVICES={youtube:{name:'YouTube',hint:'Поиск видео на YouTube. Полная версия может быть недоступна.'},kinopoisk:{name:'Кинопоиск',hint:'Может потребоваться подписка. Воспроизведение зависит от региона.'},rutube:{name:'Rutube',hint:'Поиск видео на Rutube. Доступность полной версии определяет сервис.'},vkvideo:{name:'VK Видео',hint:'Может потребоваться вход. Доступность видео определяет сервис.'}};
+import {CINEMA_MIRRORS,cinemaMirrorURL,cinemaMirrorPage} from './cinema-mirrors.js';
+export const CINEMA_SERVICES={...Object.fromEntries(Object.entries(CINEMA_MIRRORS).map(([id,info])=>[id,{name:info.name,kind:'player',hint:'Плеер откроется в Yoru по ID Кинопоиска. Сезон, серия, качество и перевод выбираются внутри плеера.'}])),youtube:{name:'YouTube',hint:'Поиск видео на YouTube. Полная версия может быть недоступна.'},kinopoisk:{name:'Кинопоиск',hint:'Может потребоваться подписка. Воспроизведение зависит от региона.'},rutube:{name:'Rutube',hint:'Поиск видео на Rutube. Доступность полной версии определяет сервис.'},vkvideo:{name:'VK Видео',hint:'Может потребоваться вход. Доступность видео определяет сервис.'}};
 export function cinemaServiceURL(service,item,episode){
  if(!Object.hasOwn(CINEMA_SERVICES,service)||typeof item?.title!=='string'||!item.title.trim()||item.title.length>160||!['movie','series'].includes(item.media))throw new Error('Не удалось открыть сервис.');
+ if(episode&&(!Number.isInteger(episode.season)||episode.season<1||episode.season>100||!Number.isInteger(episode.number)||episode.number<1||episode.number>10000))throw new Error('Некорректная серия.');
+ if(Object.hasOwn(CINEMA_MIRRORS,service))return cinemaMirrorURL(service,item);
  const year=typeof item.year==='string'?item.year.match(/\d{4}/)?.[0]||'':'';
  let query=[item.title.trim(),year].filter(Boolean).join(' ');
  if(episode){if(!Number.isInteger(episode.season)||episode.season<1||episode.season>100||!Number.isInteger(episode.number)||episode.number<1||episode.number>10000)throw new Error('Некорректная серия.');query+=` ${episode.season} сезон ${episode.number} серия`;}
@@ -15,6 +18,7 @@ export function cinemaDiscovery(value){
 }
 export function cinemaWebURL(value){
  const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||url.port)throw new Error('Некорректная ссылка сервиса.');
+ if(cinemaMirrorPage(value))return url.href;
  const allowed={'www.youtube.com':['/results','search_query'],'www.kinopoisk.ru':['/index.php','kp_query'],'rutube.ru':['/search/','query'],'vkvideo.ru':['/','q']};const rule=allowed[url.hostname];
  if(rule&&url.pathname===rule[0]&&[...url.searchParams.keys()].every(key=>key===rule[1])&&url.searchParams.get(rule[1])?.length<=260&&!url.hash)return url.href;
  if(url.hostname==='archive.org'&&/^\/details\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,179}$/.test(url.pathname)&&!url.search&&!url.hash)return url.href;

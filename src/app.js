@@ -621,6 +621,10 @@ async function fullscreen() {
 }
 $('#fullscreen-button').onclick = fullscreen;
 document.addEventListener('keydown', event => {
+  if(!event.ctrlKey&&!event.altKey&&!event.metaKey&&!event.repeat&&!event.isComposing&&!document.querySelector('dialog[open]')){
+    if(event.key==='Escape'&&document.fullscreenElement){event.preventDefault();document.exitFullscreen().catch(()=>{});return;}
+    if(event.key==='F11'&&active){event.preventDefault();fullscreen();return;}
+  }
   if (event.ctrlKey || event.altKey || event.metaKey || event.repeat || event.isComposing || event.target.closest('input,select,textarea,[contenteditable="true"]') || document.querySelector('dialog[open]')) return;
   if (event.key === 'Escape') { setFocusMode(false); return; }
   if (!preferences.playback.shortcuts) return;

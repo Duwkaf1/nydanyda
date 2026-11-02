@@ -2,8 +2,14 @@ name: Verify and build Windows
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -11,8 +17,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - shell: pwsh
@@ -34,8 +40,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -71,15 +77,39 @@ jobs:
       - name: Archive application
         shell: pwsh
         run: 7z a artifacts/Yoru-windows-x64.zip ./artifacts/Yoru-win32-x64/*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Yoru-windows-x64
           path: artifacts/Yoru-windows-x64.zip
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Yoru-installer-x64
           path: |
             artifacts/Yoru-Setup-*-x64.exe
             artifacts/Yoru-Setup-*-x64.exe.sha256
           if-no-files-found: error
+
+  publish:
+    needs: windows
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v8
+        with:
+          name: Yoru-installer-x64
+          path: release-assets
+      - uses: actions/download-artifact@v8
+        with:
+          name: Yoru-windows-x64
+          path: release-assets
+      - name: Verify checksums and publish public downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-release.js

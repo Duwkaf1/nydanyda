@@ -1,3 +1,5 @@
+import {cinemaMirrorPage} from '../src/cinema-mirrors.js';
+import {allowPlayerFullscreen} from './player-permissions.js';
 import {playerMedia} from './player-media.js';
 import {createPlayerProtection} from './player-protection.js';
 import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol } from 'electron';
@@ -31,16 +33,17 @@ const guardedSessions = new WeakSet();
 const anidbCache = new Map(); let lastAniDBRequest = 0; let aniDBBusy = false; let aniDBBlockedUntil = 0;
 const catalogRequests = new Map();
 function openPlayerPage(key, url, title) {
+  if(key.startsWith('cinema-'))for(const [other,window]of sourceWindows)if(other.startsWith('cinema-')&&other!==key)window.close();
   const existing = sourceWindows.get(key);
-  if (existing && !existing.isDestroyed()) { if (existing.webContents.getURL() !== url) existing.loadURL(url).catch(() => {}); existing.focus(); return; }
+  if (existing && !existing.isDestroyed()) { existing.setTitle(title); if (existing.webContents.getURL() !== url) existing.loadURL(url).catch(() => {}); existing.focus(); return; }
   const window = new BrowserWindow({ width: 1200, height: 850, title, icon: windowIcon, autoHideMenuBar: true,
     webPreferences: { partition: `player-${key}`, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true },
   });
   sourceWindows.set(key, window); const session = window.webContents.session;
-  session.setPermissionRequestHandler((_wc, _p, callback) => callback(false)); session.setPermissionCheckHandler(() => false);
+  allowPlayerFullscreen(window);
   if (!guardedSessions.has(session)) { session.on('will-download', event => event.preventDefault()); guardedSessions.add(session); }
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const guard = (event, value) => { try { const target = new URL(value); if (target.protocol !== 'https:' || target.username || target.password) event.preventDefault(); } catch { event.preventDefault(); } };
+  const guard = (event, value) => { try { const target = new URL(value); if (target.protocol !== 'https:' || target.username || target.password || target.port || key.startsWith('cinema-')&&!['kinopoisk.cx','www.kinopoisk.cx','kinopoisk.sbs','www.kinopoisk.sbs','kinopoisk.cfd','www.kinopoisk.cfd','sspoisk.ru','www.sspoisk.ru','kinokino.vip','www.kinokino.vip'].includes(target.hostname)) event.preventDefault(); } catch { event.preventDefault(); } };
   window.webContents.on('will-navigate', guard); window.webContents.on('will-redirect', guard);
   window.on('closed', () => sourceWindows.delete(key)); window.loadURL(url).catch(() => { if (!window.isDestroyed()) window.setTitle(`${title} — не удалось загрузить`); });
 }
@@ -61,8 +64,7 @@ else {
     });
     mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     mainWindow.webContents.on('will-navigate', event => event.preventDefault());
-    mainWindow.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-    mainWindow.webContents.session.setPermissionCheckHandler(() => false);
+    allowPlayerFullscreen(mainWindow,{local:true});
     mainWindow.webContents.session.on('will-download', event => event.preventDefault());
     mainWindow.loadFile(path.join(here, '../dist/index.html'));
     const trusted = event => {
@@ -87,10 +89,10 @@ else {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) return;
       if (typeof requestId === 'string') catalogRequests.get(requestId)?.abort();
     });
-    ipcMain.handle('cinema:open',async(event,data)=>{trusted(event);return openCinemaService(data,{openExternal:url=>shell.openExternal(url)});});
+    ipcMain.handle('cinema:open',async(event,data)=>{trusted(event);return openCinemaService(data,{openExternal:url=>shell.openExternal(url),openPlayer:({key,url,title})=>openPlayerPage(key,url,title)});});
     let cinemaProbe;let cinemaProbeTime=0;let cinemaProbeResult;
     ipcMain.handle('cinema:probe',async event=>{trusted(event);if(cinemaProbe)return cinemaProbe;if(cinemaProbeResult&&Date.now()-cinemaProbeTime<30000)return cinemaProbeResult;cinemaProbe=probeCinema(net.fetch);try{cinemaProbeResult=await cinemaProbe;cinemaProbeTime=Date.now();return cinemaProbeResult;}finally{cinemaProbe=null;}});
-    ipcMain.handle('player:open', (event, value) => { trusted(event);const external=externalCinemaLink(value);if(external)return shell.openExternal(external); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
+    ipcMain.handle('player:open', (event, value) => { trusted(event);const mirror=cinemaMirrorPage(value);if(mirror)return openPlayerPage('cinema-'+new URL(mirror.url).hostname,mirror.url,`${new URL(mirror.url).hostname} · Yoru`);const external=externalCinemaLink(value);if(external)return shell.openExternal(external); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
     ipcMain.handle('anidb:open', (event, data) => {
       trusted(event);
       const url = data?.wiki === true ? 'https://wiki.anidb.net/HTTP_API_Definition' : anidbPage(data?.id, data?.episodeId);
@@ -136,8 +138,7 @@ else {
       });
       sourceWindows.set(id, window);
       const session = window.webContents.session;
-      session.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-      session.setPermissionCheckHandler(() => false);
+      allowPlayerFullscreen(window);
       if (!guardedSessions.has(session)) {
         session.on('will-download', event => event.preventDefault());
         guardedSessions.add(session);

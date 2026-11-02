@@ -1,0 +1,16 @@
+import {readFile,stat,writeFile} from 'node:fs/promises';import {createReadStream} from 'node:fs';import{createHash}from'node:crypto';import{spawnSync}from'node:child_process';import path from'node:path';
+const {version}=JSON.parse(await readFile('package.json','utf8'));if(!/^\d+\.\d+\.\d+$/.test(version))throw new Error('Invalid version.');
+const repo=process.env.GITHUB_REPOSITORY,head=process.env.GITHUB_SHA;if(!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repo||'')||!/^[a-f0-9]{40}$/.test(head||''))throw new Error('Publishing requires the verified GitHub build context.');
+const tag='v'+version,name=`Yoru-Setup-${version}-x64.exe`,directory=path.resolve('release-assets'),installer=path.join(directory,name),checksum=installer+'.sha256',portable=path.join(directory,'Yoru-windows-x64.zip');
+const recorded=(await readFile(checksum,'utf8')).trim().match(/^([a-f0-9]{64})\s+(.+)$/);if(!recorded||recorded[2]!==name)throw new Error('Invalid installer checksum file.');
+const size=(await stat(installer)).size;if(size<90*1024*1024||(await stat(portable)).size<90*1024*1024)throw new Error('The real installer and application archive are required; inert test payloads cannot be published.');
+const hash=createHash('sha256');for await(const bytes of createReadStream(installer))hash.update(bytes);if(hash.digest('hex')!==recorded[1])throw new Error('Installer checksum mismatch.');
+function gh(args,optional=false){const result=spawnSync('gh',args,{encoding:'utf8',stdio:['ignore','pipe','pipe']});if(result.status!==0&&!optional)throw new Error(result.stderr||'GitHub release command failed.');return result;}
+const view=gh(['release','view',tag,'--repo',repo,'--json','isDraft,targetCommitish,url,assets'],true);let previous;
+if(view.status===0){previous=JSON.parse(view.stdout);if(previous.targetCommitish!==head)throw new Error(`Release ${tag} belongs to another commit; increase the application version.`);if(!previous.isDraft){const names=new Set(previous.assets.map(a=>a.name));if(![name,name+'.sha256','Yoru-windows-x64.zip'].every(n=>names.has(n)))throw new Error('Published release is incomplete; published binaries will not be overwritten.');process.stdout.write(previous.url+'\n');process.exit(0);}}
+const notes=`Yoru ${version}\n\nWindows 10/11 x64. Download the Setup EXE below; GitHub sign-in is not required for public release assets.\n\nПубличный установщик: скачайте EXE из Assets и запустите его. Архив Yoru-windows-x64.zip — версия без установки.\n\nИсходники проверенной сборки: ${head}\nУстановщик: ${size} bytes\nSHA-256: ${recorded[1]}\n\nПроверки приложения, установки, обновления и удаления завершены перед публикацией. Доступность внешнего видео определяет источник; она не подтверждается тестовыми видео.\n`;
+await writeFile('release-notes.md',notes);
+if(!previous)gh(['release','create',tag,'--repo',repo,'--target',head,'--title',`Yoru ${version}`,'--notes-file','release-notes.md','--draft']);
+gh(['release','upload',tag,installer,checksum,portable,'--repo',repo,'--clobber']);
+gh(['release','edit',tag,'--repo',repo,'--draft=false','--latest']);
+process.stdout.write(`https://github.com/${repo}/releases/tag/${tag}\n${name} | ${size} bytes | SHA256 ${recorded[1]}\n`);

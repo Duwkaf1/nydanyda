@@ -510,3 +510,7 @@ input.yoru-volume { flex:0 1 76px;width:76px;min-width:44px;margin:0 6px 0 -4px;
 .provider-controls-open .yoru-video-stage { display:none; }
 .cast-view-label { display:flex;align-items:center;gap:10px;width:max-content;max-width:100%;font-size:12px;color:var(--muted);margin:0 0 10px; }
 .cast-view-label select { width:auto;min-width:140px;min-height:36px;padding:7px 12px; }
+
+/* Fullscreen fills the screen in cinema mode and in both video engines. */
+#video-host:fullscreen { width:100vw!important;height:100vh!important;max-height:none!important;aspect-ratio:auto;contain:none;border-radius:0; }
+#video-host:fullscreen video,#video-host:fullscreen > .video-js,#video-host:fullscreen iframe { width:100%;height:100%;max-height:none!important;aspect-ratio:auto;object-fit:contain; }

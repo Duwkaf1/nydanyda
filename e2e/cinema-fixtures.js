@@ -10,7 +10,8 @@ export async function serveCinema(page,{fail=false,delay=0}={}){
  await page.route('**/__yoru/catalog?**',async route=>{const url=new URL(route.request().url());const kind=url.searchParams.get('kind');if(!kind?.startsWith('cinema-'))return route.fallback();requests.push(url);if(delay)await new Promise(r=>setTimeout(r,delay));if(fail)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Каталоги сейчас недоступны.'})});
  const {cinemaItem}=await import('../src/cinema-provider.js');const provider=url.searchParams.get('provider');const media=url.searchParams.get('media');
  let result;
- if(kind==='cinema-genres')result={genres:['Drama','Crime']};
+ if(kind==='cinema-match')result={kinopoiskId:null,message:'Автоподбор недоступен в этом контролируемом примере.'};
+ else if(kind==='cinema-genres')result={genres:['Drama','Crime']};
  else if(provider==='archive')result=kind==='cinema-detail'?{item:cinemaItem(archive,'archive','movie'),archive}:{items:[cinemaItem(archive,'archive','movie')],hasMore:false,total:1,provider:'archive'};
  else{const raw=(media==='series'?cinema.series:cinema.movies).metas;result=kind==='cinema-detail'?{item:cinemaItem(raw.find(item=>item.id===url.searchParams.get('id')),'cinemeta',media)}:{items:raw.filter(item=>item.name.toLowerCase().includes((url.searchParams.get('query')||'').toLowerCase())).map(item=>cinemaItem(item,'cinemeta',media)),hasMore:false,total:null,provider};}
  return route.fulfill({contentType:'application/json',body:JSON.stringify(result)});
