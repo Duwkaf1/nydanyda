@@ -57,7 +57,14 @@ jobs:
           }
       - run: npm run build
       - name: Launch and check the real desktop application
-        run: npm run test:desktop
+        shell: pwsh
+        run: |
+          & npm run test:desktop 2>&1 | Tee-Object -Variable desktopOutput
+          if ($LASTEXITCODE -ne 0) {
+            $diagnosis = (($desktopOutput | Select-Object -Last 45) -join "`n") -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A'
+            Write-Host "::error title=Desktop test failure::$diagnosis"
+            exit 1
+          }
       - run: npm run package:win
       - name: Install NSIS compiler
         shell: pwsh
