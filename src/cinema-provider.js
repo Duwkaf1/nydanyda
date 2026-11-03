@@ -5,6 +5,8 @@ export function cinemaArgs(data){
  if(!data||!['cinema-list','cinema-detail','cinema-genres'].includes(data.kind)||!['movie','series'].includes(data.media)||!CINEMA_PROVIDERS.includes(data.provider)||data.provider==='archive'&&data.media!=='movie'||data.provider==='tvmaze'&&data.media!=='series')throw new Error('Неизвестный раздел кино.');
  if(data.kind==='cinema-genres'){if(data.provider!=='cinemeta')throw new Error('Жанры этого каталога не запрашиваются.');return data;}
  if(data.kind==='cinema-list'){
+  for(const [key,max]of [['yearFrom',new Date().getFullYear()+2],['yearTo',new Date().getFullYear()+2],['minImdb',10],['minTomatoes',100],['cursor',250000]])if(data[key]!==undefined&&(!Number.isFinite(data[key])||data[key]<0||data[key]>max||(key!=='minImdb'&&!Number.isInteger(data[key]))))throw new Error('Некорректный фильтр каталога.');
+  if(data.yearFrom&&data.yearTo&&data.yearFrom>data.yearTo)throw new Error('Начальный год должен быть не позже конечного.');
   if(typeof data.query!=='string'||data.query.length>100||!Number.isInteger(data.page)||data.page<1||data.page>1000||typeof data.genre!=='string'||data.genre.length>60||/[\u0000-\u001f\u007f]/.test(data.genre))throw new Error('Некорректные условия поиска.');
  }else if(data.provider==='cinemeta'?!/^tt\d{7,10}$/.test(data.id):data.provider==='tvmaze'?!/^\d{1,9}$/.test(data.id):!validArchiveId(data.id))throw new Error('Не удалось определить фильм или сериал.');
  return data;
@@ -27,7 +29,7 @@ export function cinemaURL(data,providerPage=0){
  const licenses=ARCHIVE_LICENSES.map(license=>`licenseurl:"${license}"`).join(' OR ');
  const genre=data.genre?` AND subject:"${data.genre.replace(/["\\]/g,' ')}"`:'';
  const terms=data.query.trim().split(/\s+/).filter(Boolean).map(term=>`title:"${term.replace(/["\\]/g,' ')}"`).join(' AND ');
- url.searchParams.set('q',`mediatype:movies AND collection:feature_films AND (${licenses})${terms?' AND '+terms:''}${genre}`);
+ url.searchParams.set('q',`mediatype:movies AND collection:feature_films AND (${licenses})${terms?' AND '+terms:''}${genre}${data.yearFrom||data.yearTo?` AND year:[${data.yearFrom||1800} TO ${data.yearTo||new Date().getFullYear()}]`:''}`);
  for(const field of ['identifier','title','year','description','licenseurl','language','subject'])url.searchParams.append('fl[]',field);
  url.searchParams.set('output','json');url.searchParams.set('rows','24');url.searchParams.set('page',String(data.page));url.searchParams.set('sort[]','downloads desc');return url.href;
 }

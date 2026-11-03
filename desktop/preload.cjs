@@ -3,6 +3,8 @@ contextBridge.exposeInMainWorld('kadr', Object.freeze({
   uninstallStatus: () => ipcRenderer.invoke('app:uninstall-status'),
   uninstallApp: () => ipcRenderer.invoke('app:uninstall'),
   openCinema: data => ipcRenderer.invoke('cinema:open', data),
+  ratingsStatus: () => ipcRenderer.invoke('ratings:status'),
+  configureRatings: key => ipcRenderer.invoke('ratings:configure',key),
   probeCinema: () => ipcRenderer.invoke('cinema:probe'),
   openSource: id => ipcRenderer.invoke('source:open', id),
   openAniDB: data => ipcRenderer.invoke('anidb:open', data),

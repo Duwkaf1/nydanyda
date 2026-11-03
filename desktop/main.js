@@ -1,8 +1,9 @@
+import {ratingsStore} from './ratings-store.js';
 import {cinemaMirrorPage} from '../src/cinema-mirrors.js';
 import {allowPlayerFullscreen} from './player-permissions.js';
 import {playerMedia} from './player-media.js';
 import {createPlayerProtection} from './player-protection.js';
-import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol, safeStorage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
@@ -51,6 +52,7 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (mainWindow?.isMinimized()) mainWindow.restore(); mainWindow?.focus(); });
   app.whenReady().then(() => {
+    const ratings=ratingsStore(path.join(userData,'ratings-key.bin'),safeStorage);
     const protection=createPlayerProtection();
     app.on('web-contents-created',(_event,contents)=>protection.protectContents(contents));
     mainWindow = new BrowserWindow({
@@ -70,6 +72,8 @@ else {
     const trusted = event => {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('Недоступно');
     };
+    ipcMain.handle('ratings:status',event=>{trusted(event);return ratings.status();});
+    ipcMain.handle('ratings:configure',(event,key)=>{trusted(event);return ratings.set(key);});
     const media=playerMedia({ipcMain,window:()=>mainWindow,trusted});
     mainWindow.on('close',()=>media.stop());
     const availability=()=>uninstallAvailability({packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),userData:app.getPath('userData')});
@@ -80,7 +84,7 @@ else {
       trusted(event);
       if (typeof data?.requestId !== 'string' || !/^[a-z0-9-]{1,64}$/i.test(data.requestId) || catalogRequests.has(data.requestId) || catalogRequests.size >= 6) throw new Error('Подожди завершения поиска и попробуй ещё раз.');
       const controller = new AbortController(); catalogRequests.set(data.requestId, controller);
-      try { return await requestCatalog(data, { fetcher: net.fetch, signal: controller.signal }); }
+      try { return await requestCatalog(data, { fetcher: net.fetch, signal: controller.signal, ratingsKey: ratings.get() }); }
       finally { catalogRequests.delete(data.requestId); }
     });
     ipcMain.on('catalog:cancel', (event, requestId) => {

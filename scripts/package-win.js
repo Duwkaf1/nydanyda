@@ -28,7 +28,7 @@ for (const item of output) {
   await copyFile('docs/viewing-0.6.md', path.join(item, 'Просмотр-и-субтитры.md'));
   await copyFile('docs/redesign-0.7.md', path.join(item, 'Оформление-и-проверки.md'));
   await copyFile('docs/character-details.md', path.join(item, 'Имена-и-заметки.md'));
-  await copyFile('docs/fullscreen-cinema-0.9.6.md', path.join(item, 'Проверка-перед-публикацией.md'));
+  await copyFile('docs/cinema-filters-0.9.7.md', path.join(item, 'Проверка-перед-публикацией.md'));
   await copyFile('node_modules/video.js/LICENSE', path.join(item, 'LICENSE-video.js.txt'));
   await copyFile('node_modules/libass-wasm/dist/js/COPYRIGHT', path.join(item, 'LICENSE-libass-wasm.txt'));
   await writeFile(path.join(item, 'ПРОЧИТАЙ.txt'), `\uFEFFYORU ${version}

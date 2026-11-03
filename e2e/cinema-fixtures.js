@@ -5,12 +5,14 @@ import {serveCatalog} from './catalog-fixtures.js';
 export const cinema=JSON.parse(readFileSync(new URL('../test/fixtures/cinema/catalog.json',import.meta.url)));
 export const movieBytes=readFileSync(new URL('../test/fixtures/playback/tone.mp4',import.meta.url));
 export const archive={metadata:{identifier:'owned-cinema-fixture',title:'Проверочный фильм',description:'Собственный короткий видеофрагмент для проверки плеера и резервных серверов.',year:'2026',language:'eng',licenseurl:ARCHIVE_LICENSES[0]},dir:'/1/items/owned-cinema-fixture',d1:'ia800111.us.archive.org',d2:'ia600111.us.archive.org',files:[{name:'movie.mp4',height:'1080',length:'1200',md5:createHash('md5').update(movieBytes).digest('hex')}]};
-export async function serveCinema(page,{fail=false,delay=0}={}){
+export async function serveCinema(page,{fail=false,delay=0,recent=false}={}){
+ if(!recent)await page.addInitScript(()=>{const key='yoru.cinema-filters.v1';if(!localStorage.getItem(key))localStorage.setItem(key,JSON.stringify({movie:{period:'all'},series:{period:'all'}}));});
  await serveCatalog(page);const requests=[];
  await page.route('**/__yoru/catalog?**',async route=>{const url=new URL(route.request().url());const kind=url.searchParams.get('kind');if(!kind?.startsWith('cinema-'))return route.fallback();requests.push(url);if(delay)await new Promise(r=>setTimeout(r,delay));if(fail)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Каталоги сейчас недоступны.'})});
  const {cinemaItem}=await import('../src/cinema-provider.js');const provider=url.searchParams.get('provider');const media=url.searchParams.get('media');
  let result;
- if(kind==='cinema-match')result={kinopoiskId:null,message:'Автоподбор недоступен в этом контролируемом примере.'};
+ if(kind==='cinema-ratings')result={items:{},configured:false};
+ else if(kind==='cinema-match')result={kinopoiskId:null,message:'Автоподбор недоступен в этом контролируемом примере.'};
  else if(kind==='cinema-genres')result={genres:['Drama','Crime']};
  else if(provider==='archive')result=kind==='cinema-detail'?{item:cinemaItem(archive,'archive','movie'),archive}:{items:[cinemaItem(archive,'archive','movie')],hasMore:false,total:1,provider:'archive'};
  else{const raw=(media==='series'?cinema.series:cinema.movies).metas;result=kind==='cinema-detail'?{item:cinemaItem(raw.find(item=>item.id===url.searchParams.get('id')),'cinemeta',media)}:{items:raw.filter(item=>item.name.toLowerCase().includes((url.searchParams.get('query')||'').toLowerCase())).map(item=>cinemaItem(item,'cinemeta',media)),hasMore:false,total:null,provider};}
