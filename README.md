@@ -2,7 +2,7 @@
 
 <img src="public/yoru-icon.png" width="80" height="80" alt="Иконка Yoru">
 
-**Windows 10/11 · x64 · версия 0.9.7**
+**Windows 10/11 · x64 · версия 0.9.8**
 
 Три раздела в одном приложении: **Аниме / Фильмы / Сериалы**. Поиск, жанры, избранное, библиотека, темы и сохранение позиции встроенного просмотра.
 
@@ -14,9 +14,9 @@
 
 ## Установка
 
-**[Скачать Yoru 0.9.7 — установочный EXE](https://github.com/Duwkaf1/nydanyda/releases/download/v0.9.7/Yoru-Setup-0.9.7-x64.exe)** — около 108 MiB, **без входа в GitHub**. Закрой прежний Yoru, запусти EXE и нажми «Установить». Библиотека и настройки сохраняются; права администратора не нужны.
+**[Скачать Yoru 0.9.8 — установочный EXE](https://github.com/Duwkaf1/nydanyda/releases/download/v0.9.8/Yoru-Setup-0.9.8-x64.exe)** — около 108 MiB, **без входа в GitHub**. Закрой прежний Yoru, запусти EXE и нажми «Установить». Библиотека и настройки сохраняются; права администратора не нужны.
 
-[Страница релиза](https://github.com/Duwkaf1/nydanyda/releases/tag/v0.9.7) · [ZIP без установки](https://github.com/Duwkaf1/nydanyda/releases/download/v0.9.7/Yoru-windows-x64.zip) · [Исходники ZIP](https://github.com/Duwkaf1/nydanyda/archive/refs/tags/v0.9.7.zip) · [Инструкция](docs/installer.md) · [Успешная Windows-проверка](https://github.com/Duwkaf1/nydanyda/actions/runs/41621658949)
+[Страница релиза](https://github.com/Duwkaf1/nydanyda/releases/tag/v0.9.8) · [ZIP без установки](https://github.com/Duwkaf1/nydanyda/releases/download/v0.9.8/Yoru-windows-x64.zip) · [Исходники ZIP](https://github.com/Duwkaf1/nydanyda/archive/refs/tags/v0.9.8.zip) · [Инструкция](docs/installer.md) · [Успешная Windows-проверка](https://github.com/Duwkaf1/nydanyda/actions/runs/41639932463)
 
 ## Загрузка каталогов, постеры и оценки 0.9.8
 
@@ -46,7 +46,7 @@ IMDb отображается по шкале 10. **Rotten Tomatoes** — оце
 
 Пример ID на снимке взят из сообщения пользователя и не объявляется подтверждённым соответствием Sherlock. Доступность самих зеркал живым видео ещё не подтверждена: текущая сеть среды блокирует их. [Возможности, проверки и ограничения 0.9.6](docs/fullscreen-cinema-0.9.6.md).
 
-Актуальная [Windows-проверка 0.9.7](https://github.com/Duwkaf1/nydanyda/actions/runs/41621658949) прошла. Исторические неудачные запуски остаются в истории Actions; подробности текущего выпуска — в отчёте 0.9.7. Репозиторий переименован в **Duwkaf1/nydanyda** и публичен. Новые установщики публикуются в **GitHub Releases** после проверки контрольной суммы и Windows-установки; для скачивания Releases аккаунт не нужен. Исходные тексты также доступны публично.
+Актуальная [Windows-проверка 0.9.8](https://github.com/Duwkaf1/nydanyda/actions/runs/41639932463) прошла. Исторические неудачные запуски остаются в истории Actions; подробности текущего выпуска — в отчёте 0.9.8. Репозиторий переименован в **Duwkaf1/nydanyda** и публичен. Новые установщики публикуются в **GitHub Releases** после проверки контрольной суммы и Windows-установки; для скачивания Releases аккаунт не нужен. Исходные тексты также доступны публично.
 
 ## Проверка популярных аниме 0.9.5
 
