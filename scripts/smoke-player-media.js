@@ -12,11 +12,11 @@ export async function smokePlayerMedia({application,page}){
  const play=page.getByTestId('yoru-play');if(await play.getAttribute('aria-label')==='Воспроизвести')await play.click();
  await page.waitForFunction(()=>document.querySelector('[data-testid="yoru-play"]')?.getAttribute('aria-label')==='Пауза');
  const decoded=await nested.locator('video').evaluate(v=>({height:v.videoHeight,audio:v.webkitAudioDecodedByteCount}));assert.equal(decoded.height,1080);assert.ok(decoded.audio>0);
- await play.click();for(let i=0;i<30;i++){if(await nested.locator('video').evaluate(v=>v.paused))break;await page.waitForTimeout(100);}assert.equal(await nested.locator('video').evaluate(v=>v.paused),true);
+ await play.click();for(let i=0;i<30;i++){if(await nested.locator('video').evaluate(v=>v.paused))break;await page.waitForTimeout(100);}assert.equal(await nested.locator('video').evaluate(v=>v.paused),true);await page.waitForFunction(()=>document.querySelector('[data-testid="yoru-play"]')?.getAttribute('aria-label')==='Воспроизвести');
  const timeline=page.getByRole('slider',{name:'Позиция воспроизведения'});await timeline.fill('2');for(let i=0;i<30;i++){if(Math.abs(await nested.locator('video').evaluate(v=>v.currentTime)-2)<.2)break;await page.waitForTimeout(100);}
  assert.ok(Math.abs(await nested.locator('video').evaluate(v=>v.currentTime)-2)<.2);
  await page.getByRole('button',{name:'Выключить звук',exact:true}).click();for(let i=0;i<20;i++){if(await nested.locator('video').evaluate(v=>v.muted))break;await page.waitForTimeout(100);}assert.equal(await nested.locator('video').evaluate(v=>v.muted),true);
- await play.click();await page.waitForFunction(()=>document.querySelector('#playing-title').textContent.includes('Серия 2'),{},{timeout:10000});
+ await page.waitForFunction(()=>document.querySelector('[data-testid="yoru-play"]')?.getAttribute('aria-label')==='Воспроизвести');await play.click();await page.waitForFunction(()=>document.querySelector('[data-testid="yoru-play"]')?.getAttribute('aria-label')==='Пауза');try{await page.waitForFunction(()=>document.querySelector('#playing-title').textContent.includes('Серия 2'),{},{timeout:10000});}catch(error){console.log('Nested auto-next diagnostic:',{video:await nested.locator('video').evaluate(v=>({paused:v.paused,ended:v.ended,time:v.currentTime,duration:v.duration,readyState:v.readyState})).catch(()=>null),button:await play.getAttribute('aria-label'),title:await page.locator('#playing-title').textContent()});throw error;}
  console.log('PASS: real nested cross-origin HTML5 video without player API, sandboxed remote frame, Yoru play/pause/seek/mute, decoded 1080p H.264/AAC and actual ended -> next episode');
  await page.getByRole('button',{name:'Закрыть плеер',exact:true}).click();
 }

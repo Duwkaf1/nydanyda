@@ -94,8 +94,8 @@ else {
       if (typeof requestId === 'string') catalogRequests.get(requestId)?.abort();
     });
     ipcMain.handle('cinema:open',async(event,data)=>{trusted(event);return openCinemaService(data,{openExternal:url=>shell.openExternal(url),openPlayer:({key,url,title})=>openPlayerPage(key,url,title)});});
-    let cinemaProbe;let cinemaProbeTime=0;let cinemaProbeResult;
-    ipcMain.handle('cinema:probe',async event=>{trusted(event);if(cinemaProbe)return cinemaProbe;if(cinemaProbeResult&&Date.now()-cinemaProbeTime<30000)return cinemaProbeResult;cinemaProbe=probeCinema(net.fetch);try{cinemaProbeResult=await cinemaProbe;cinemaProbeTime=Date.now();return cinemaProbeResult;}finally{cinemaProbe=null;}});
+    let cinemaProbe;
+    ipcMain.handle('cinema:probe',async event=>{trusted(event);if(cinemaProbe)return cinemaProbe;cinemaProbe=probeCinema(net.fetch);try{return await cinemaProbe;}finally{cinemaProbe=null;}});
     ipcMain.handle('player:open', (event, value) => { trusted(event);const mirror=cinemaMirrorPage(value);if(mirror)return openPlayerPage('cinema-'+new URL(mirror.url).hostname,mirror.url,`${new URL(mirror.url).hostname} · Yoru`);const external=externalCinemaLink(value);if(external)return shell.openExternal(external); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
     ipcMain.handle('anidb:open', (event, data) => {
       trusted(event);
