@@ -1,9 +1,9 @@
-import {ratingsStore} from './ratings-store.js';
+import {lordfilmPage,lordfilmCatalogURL,LORDFILM_ORIGIN} from '../src/lordfilm.js';
 import {cinemaMirrorPage} from '../src/cinema-mirrors.js';
 import {allowPlayerFullscreen} from './player-permissions.js';
 import {playerMedia} from './player-media.js';
 import {createPlayerProtection} from './player-protection.js';
-import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol, safeStorage } from 'electron';
+import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
@@ -44,7 +44,7 @@ function openPlayerPage(key, url, title) {
   allowPlayerFullscreen(window);
   if (!guardedSessions.has(session)) { session.on('will-download', event => event.preventDefault()); guardedSessions.add(session); }
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const guard = (event, value) => { try { const target = new URL(value); if (target.protocol !== 'https:' || target.username || target.password || target.port || key.startsWith('cinema-')&&!['kinopoisk.cx','www.kinopoisk.cx','kinopoisk.sbs','www.kinopoisk.sbs','kinopoisk.cfd','www.kinopoisk.cfd','sspoisk.ru','www.sspoisk.ru','kinokino.vip','www.kinokino.vip'].includes(target.hostname)) event.preventDefault(); } catch { event.preventDefault(); } };
+  const guard = (event, value) => { try { const target = new URL(value); if (target.protocol !== 'https:' || target.username || target.password || target.port || (key==='cinema-lordfilm'?target.origin!==LORDFILM_ORIGIN:key.startsWith('cinema-')&&!['kinopoisk.cx','www.kinopoisk.cx','kinopoisk.sbs','www.kinopoisk.sbs','kinopoisk.cfd','www.kinopoisk.cfd','sspoisk.ru','www.sspoisk.ru','kinokino.vip','www.kinokino.vip'].includes(target.hostname))) event.preventDefault(); } catch { event.preventDefault(); } };
   window.webContents.on('will-navigate', guard); window.webContents.on('will-redirect', guard);
   window.on('closed', () => sourceWindows.delete(key)); window.loadURL(url).catch(() => { if (!window.isDestroyed()) window.setTitle(`${title} — не удалось загрузить`); });
 }
@@ -52,7 +52,6 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (mainWindow?.isMinimized()) mainWindow.restore(); mainWindow?.focus(); });
   app.whenReady().then(() => {
-    const ratings=ratingsStore(path.join(userData,'ratings-key.bin'),safeStorage);
     const protection=createPlayerProtection();
     app.on('web-contents-created',(_event,contents)=>protection.protectContents(contents));
     mainWindow = new BrowserWindow({
@@ -72,8 +71,6 @@ else {
     const trusted = event => {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('Недоступно');
     };
-    ipcMain.handle('ratings:status',event=>{trusted(event);return ratings.status();});
-    ipcMain.handle('ratings:configure',(event,key)=>{trusted(event);return ratings.set(key);});
     const media=playerMedia({ipcMain,window:()=>mainWindow,trusted});
     mainWindow.on('close',()=>media.stop());
     const availability=()=>uninstallAvailability({packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),userData:app.getPath('userData')});
@@ -84,7 +81,7 @@ else {
       trusted(event);
       if (typeof data?.requestId !== 'string' || !/^[a-z0-9-]{1,64}$/i.test(data.requestId) || catalogRequests.has(data.requestId) || catalogRequests.size >= 6) throw new Error('Подожди завершения поиска и попробуй ещё раз.');
       const controller = new AbortController(); catalogRequests.set(data.requestId, controller);
-      try { return await requestCatalog(data, { fetcher: net.fetch, signal: controller.signal, ratingsKey: ratings.get() }); }
+      try { return await requestCatalog(data, { fetcher: net.fetch, signal: controller.signal }); }
       finally { catalogRequests.delete(data.requestId); }
     });
     ipcMain.on('catalog:cancel', (event, requestId) => {
@@ -93,10 +90,12 @@ else {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) return;
       if (typeof requestId === 'string') catalogRequests.get(requestId)?.abort();
     });
+    ipcMain.handle('cinema:lordfilm-browser',(event,media)=>{trusted(event);return shell.openExternal(lordfilmCatalogURL(media));});
+    ipcMain.handle('cinema:lordfilm',(event,media)=>{trusted(event);openPlayerPage('cinema-lordfilm',lordfilmCatalogURL(media),'Lordfilm · Yoru');return {opened:true,target:'yoru'};});
     ipcMain.handle('cinema:open',async(event,data)=>{trusted(event);return openCinemaService(data,{openExternal:url=>shell.openExternal(url),openPlayer:({key,url,title})=>openPlayerPage(key,url,title)});});
     let cinemaProbe;
     ipcMain.handle('cinema:probe',async event=>{trusted(event);if(cinemaProbe)return cinemaProbe;cinemaProbe=probeCinema(net.fetch);try{return await cinemaProbe;}finally{cinemaProbe=null;}});
-    ipcMain.handle('player:open', (event, value) => { trusted(event);const mirror=cinemaMirrorPage(value);if(mirror)return openPlayerPage('cinema-'+new URL(mirror.url).hostname,mirror.url,`${new URL(mirror.url).hostname} · Yoru`);const external=externalCinemaLink(value);if(external)return shell.openExternal(external); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
+    ipcMain.handle('player:open', (event, value) => { trusted(event);const lord=lordfilmPage(value);if(lord)return openPlayerPage('cinema-lordfilm',lord,'Lordfilm · Yoru');const mirror=cinemaMirrorPage(value);if(mirror)return openPlayerPage('cinema-'+new URL(mirror.url).hostname,mirror.url,`${new URL(mirror.url).hostname} · Yoru`);const external=externalCinemaLink(value);if(external)return shell.openExternal(external); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
     ipcMain.handle('anidb:open', (event, data) => {
       trusted(event);
       const url = data?.wiki === true ? 'https://wiki.anidb.net/HTTP_API_Definition' : anidbPage(data?.id, data?.episodeId);

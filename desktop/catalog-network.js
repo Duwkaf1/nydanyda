@@ -1,5 +1,5 @@
 import {requestCinemaMetadata} from './cinema-metadata.js';
-import {requestCinemaRatings} from './cinema-ratings.js';
+import {requestCinemaPublic} from './cinema-pages.js';
 import {matchCinema} from './cinema-match.js';
 import {requestAnimeAutomatic} from './anime-automatic.js';
 import { CATALOG_HOSTS, catalogRequestURL } from '../src/catalog-provider.js';
@@ -9,12 +9,12 @@ import { boundedText } from '../src/subtitles.js';
 
 // The renderer supplies a typed operation, never a destination URL. Only these
 // fixed public API origins are reachable through this bridge.
-export async function requestCatalog(data, { fetcher = globalThis.fetch, signal, ratingsKey } = {}) {
+export async function requestCatalog(data, { fetcher = globalThis.fetch, signal } = {}) {
   if(data?.kind==='anime-options'||data?.kind==='anime-cast'||data?.kind==='anime-episodes'||data?.kind==='anime-episode-cast')return requestAnimeAutomatic(data,{fetcher,signal});
   if(data?.kind==='cinema-metadata')return requestCinemaMetadata(data,{fetcher,signal});
-  if(data?.kind==='cinema-ratings')return requestCinemaRatings(data,{fetcher,signal,ratingsKey});
+  if(data?.kind==='cinema-public')return requestCinemaPublic(data,{fetcher,signal});
   if(data?.kind==='cinema-match')return matchCinema(data,{fetcher,signal});
-  if(data?.kind==='cinema-list'||data?.kind==='cinema-detail'||data?.kind==='cinema-genres')return requestCinema(data,{fetcher,signal,ratingsKey});
+  if(data?.kind==='cinema-list'||data?.kind==='cinema-detail'||data?.kind==='cinema-genres')return requestCinema(data,{fetcher,signal});
   catalogRequestURL(data);
   const deadline = AbortSignal.timeout(12000);
   const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;

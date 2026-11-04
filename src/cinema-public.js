@@ -1,0 +1,2 @@
+export function kinopoiskPosterURL(id){if(!Number.isSafeInteger(id)||id<1||id>9999999999)throw new Error('Некорректный ID Кинопоиска.');return `https://st.kp.yandex.net/images/film_iphone/iphone360_${id}.jpg`;}
+export function publicCinemaPoster(value){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['st.kp.yandex.net','avatars.mds.yandex.net','avatars.mds.yandex.com','images.metahub.space','image.tmdb.org','m.media-amazon.com','static.tvmaze.com'].includes(url.hostname)?url.href:'';}catch{return '';}}

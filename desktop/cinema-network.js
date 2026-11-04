@@ -1,14 +1,13 @@
 import {matchesCinema} from '../src/cinema-filters.js';
-import {cinemaRating} from './cinema-ratings.js';
 import {cinemaJSON,cinemaFailure} from './cinema-http.js';
 import {recentTVmaze} from './tvmaze-recent.js';
-import {cinemaArgs,cinemaURL,cinemaItem} from '../src/cinema-provider.js';
-export async function requestCinema(data,{fetcher=globalThis.fetch,signal,ratingsKey}={}){
+import {cinemaArgs,cinemaURL,cinemaItem,cinemaContentAllowed} from '../src/cinema-provider.js';
+export async function requestCinema(data,{fetcher=globalThis.fetch,signal}={}){
  cinemaArgs(data);const timeout=AbortSignal.timeout(22000);const total=signal?AbortSignal.any([signal,timeout]):timeout;
  async function run(args,first){
   const deadline=first&&args.kind==='cinema-list'&&args.provider==='cinemeta'?AbortSignal.any([total,AbortSignal.timeout(8000)]):total;
   const get=url=>cinemaJSON(url,{fetcher,signal:deadline});
-  if(args.kind==='cinema-genres'){const raw=await get(cinemaURL(args));const catalog=raw.catalogs?.find(item=>item.type===args.media&&item.id==='top');const options=catalog?.extra?.find(extra=>extra.name==='genre')?.options;if(!Array.isArray(options))throw new Error('Список жанров временно недоступен.');return {genres:options.filter(value=>typeof value==='string'&&value.length<=60).slice(0,80)};}
+  if(args.kind==='cinema-genres'){const raw=await get(cinemaURL(args));const catalog=raw.catalogs?.find(item=>item.type===args.media&&item.id==='top');const options=catalog?.extra?.find(extra=>extra.name==='genre')?.options;if(!Array.isArray(options))throw new Error('Список жанров временно недоступен.');return {genres:options.filter(value=>typeof value==='string'&&value.length<=60&&!/^(anime|аниме)$/i.test(value)).slice(0,80)};}
   if(args.kind==='cinema-detail'){
    const raw=await get(cinemaURL(args));const item=cinemaItem(args.provider==='cinemeta'?raw.meta:raw,args.provider,args.media);
    if(!item||item.sourceId!==args.id)throw new Error('Сервис вернул другую карточку. Повтори открытие.');
@@ -19,7 +18,7 @@ export async function requestCinema(data,{fetcher=globalThis.fetch,signal,rating
    const items=raw.response.docs.slice(0,24).map(r=>cinemaItem(r,'archive','movie')).filter(Boolean).filter(item=>args.discovery!=='yes'||matchesCinema(item,args));return {items,hasMore:args.page*24<raw.response.numFound,total:raw.response.numFound,provider:'archive'};
   }
   if(args.discovery==='yes'){
-   if(args.minTomatoes&&!ratingsKey)throw new Error('Для фильтра Rotten Tomatoes подключи ключ OMDb в настройках.');
+   if(args.minTomatoes)throw new Error('Оценка Rotten Tomatoes доступна в карточке из открытого источника. Выбери фильтр IMDb.');
    const size=args.provider==='cinemeta'?100:250;let cursor=args.cursor||0,scanned=0,ended=false;const items=[];
    let recent,warning='';
    if(args.provider==='tvmaze'&&!args.query.trim())recent=await recentTVmaze({fetcher,signal:deadline});
@@ -30,7 +29,7 @@ export async function requestCinema(data,{fetcher=globalThis.fetch,signal,rating
     const search=args.provider==='tvmaze'&&args.query.trim();const within=search?cursor:cursor%size;
     if(within>=rows.length){ended=true;break;}
     const chunk=rows.slice(within,within+Math.min(24,300-scanned));const mapped=chunk.map(row=>cinemaItem(row,args.provider,args.media));
-    if(args.minImdb||args.minTomatoes){let next=0;await Promise.all(Array.from({length:3},async()=>{while(next<mapped.length){const index=next++,item=mapped[index];if(!item?.imdbId||!matchesCinema(item,{...args,minImdb:0,minTomatoes:0}))continue;if(args.minImdb&&item.provider==='cinemeta'&&item.rating===null){try{const raw=await get(cinemaURL({kind:'cinema-detail',provider:'cinemeta',media:args.media,id:item.imdbId}));const detail=cinemaItem(raw.meta,'cinemeta',args.media);if(detail?.id===item.id)item.rating=detail.rating;}catch{}}if(args.minTomatoes||args.minImdb&&ratingsKey&&(item.provider!=='cinemeta'||item.rating===null)){try{const r=await cinemaRating(item.imdbId,args.media,{fetcher,signal:deadline,ratingsKey});item.ratings={imdb:item.provider==='cinemeta'?item.rating:null,...r};}catch{}}}}));}
+    if(args.minImdb||args.minTomatoes){let next=0;await Promise.all(Array.from({length:3},async()=>{while(next<mapped.length){const index=next++,item=mapped[index];if(!item?.imdbId||!matchesCinema(item,{...args,minImdb:0,minTomatoes:0}))continue;if(args.minImdb&&item.provider==='cinemeta'&&item.rating===null){try{const raw=await get(cinemaURL({kind:'cinema-detail',provider:'cinemeta',media:args.media,id:item.imdbId}));const detail=cinemaItem(raw.meta,'cinemeta',args.media);if(detail?.id===item.id)item.rating=detail.rating;}catch{}}}}));}
     for(let i=0;i<mapped.length;i++){cursor++;scanned++;if(mapped[i]&&matchesCinema(mapped[i],args))items.push(mapped[i]);if(items.length===24)break;}
     ended=(search||rows.length<size)&&((search?cursor:cursor%size)>=rows.length||cursor%size===0);
    }
@@ -39,18 +38,18 @@ export async function requestCinema(data,{fetcher=globalThis.fetch,signal,rating
   const size=args.provider==='cinemeta'?100:250;const offset=(args.page-1)*24;const providerPage=Math.floor(offset/size);const within=offset%size;
   const firstRaw=await get(cinemaURL(args,providerPage));const list=raw=>args.provider==='cinemeta'?raw.metas:Array.isArray(raw)?raw:null;
   let all=list(firstRaw);if(!Array.isArray(all))throw new Error('Каталог вернул неизвестный ответ.');
-  if(args.provider==='tvmaze'&&args.query.trim()){const filtered=all.map(x=>cinemaItem(x,'tvmaze','series')).filter(Boolean).filter(item=>!args.genre||item.genres.includes(args.genre));return {items:filtered.slice(offset,offset+24),hasMore:offset+24<filtered.length,total:filtered.length,provider:args.provider};}
+  if(args.provider==='tvmaze'&&args.query.trim()){const filtered=all.map(x=>cinemaItem(x,'tvmaze','series')).filter(Boolean).filter(cinemaContentAllowed).filter(item=>!args.genre||item.genres.includes(args.genre));return {items:filtered.slice(offset,offset+24),hasMore:offset+24<filtered.length,total:filtered.length,provider:args.provider};}
   let more=all.length>=size;
   if(within+24>size&&more){const next=list(await get(cinemaURL(args,providerPage+1)));if(!Array.isArray(next))throw new Error('Не удалось получить следующую страницу.');all=[...all,...next];more=next.length>=size;}
-  const items=all.slice(within,within+24).map(x=>cinemaItem(x,args.provider,args.media)).filter(Boolean);
+  const items=all.slice(within,within+24).map(x=>cinemaItem(x,args.provider,args.media)).filter(Boolean).filter(cinemaContentAllowed);
   return {items:items.filter(item=>!args.genre||!item.genres.length||item.genres.includes(args.genre)),hasMore:within+24<all.length||more,total:null,provider:args.provider};
  }
  try{return await run(data,true);}catch(error){
   if(total.aborted)throw new Error(`${data.provider}: TIMEOUT. Сервис долго не отвечает. Повтори запрос.`);
   if(data.discovery==='yes'){
-   if(error.message?.startsWith('Для фильтра'))throw error;
+   if(error.message?.startsWith('Оценка Rotten Tomatoes'))throw error;
    if(data.media==='series'&&data.provider==='cinemeta'&&!signal?.aborted){try{const result=await run({...data,provider:'tvmaze',cursor:0},false);return {...result,fallback:true,fallbackMessage:`Cinemeta недоступен (${cinemaFailure(error,'cinemeta')}). Показан TVmaze: эфир США и веб-премьеры за последние три дня; фильтры сохранены.`};}catch(fallback){throw new Error(`Каталоги недоступны. Cinemeta: ${cinemaFailure(error,'cinemeta')}; TVmaze: ${cinemaFailure(fallback,'tvmaze')}. Фильтры сохранены.`);}}
-   throw new Error(error.message?.startsWith('Для фильтра')?error.message:`Не удалось загрузить каталог: ${cinemaFailure(error,data.provider)}. Фильтры сохранены. Повтори запрос или выбери другой источник.`);
+   throw new Error(error.message?.startsWith('Оценка Rotten Tomatoes')?error.message:`Не удалось загрузить каталог: ${cinemaFailure(error,data.provider)}. Фильтры сохранены. Повтори запрос или выбери другой источник.`);
   }
   if(data.kind!=='cinema-list'||data.provider!=='cinemeta')throw new Error('Не удалось загрузить каталог. Попробуй другой источник или повтори позже.');
   const provider=data.media==='series'?'tvmaze':'archive';try{const result=await run({...data,provider},false);return {...result,fallback:true,fallbackMessage:`Основной каталог недоступен. Показаны результаты ${provider==='archive'?'Internet Archive':'TVmaze'}.`};}catch{throw new Error('Каталоги сейчас недоступны. Попробуй ещё раз; сохранённая библиотека остаётся на устройстве.');}
