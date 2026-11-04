@@ -33,3 +33,9 @@ TVmaze по-прежнему использует эфир США и веб-пр
 Из разрешённой облачной сети реальная карточка https://www.kinopoisk.ru/film/326/ ответила HTTP 302 на Yandex SSO. Метаданные такого ответа не приняты за подтверждённую карточку. Lordfilm, CDN постеров и Rotten Tomatoes пока не разрешены активной политикой облачной среды (ревизия 6): живой доступ и воспроизведение из разных стран не подтверждены. В сетевой черновик добавлены точный домен пользователя, CDN Кинопоиска и домены Rotten Tomatoes; черновик сохранён, но не применён.
 
 Для живой облачной проверки нужно проверить/сохранить сетевой черновик в настройках среды и опубликовать среду. Это технически отдельный шаг от сохранения черновика. [Cloud environment runtime SKILL.md](skill://plugin_connector_1p_c5b7d5df5d7081918f2c4be5a633ed5d/cloud-environment-runtime/SKILL.md) требует: “Configuration changes require the environment configuration workflow and its user review.” Это ограничивает проверку из облака, а не сеть установленного приложения на компьютере пользователя.
+
+## Публичный выпуск
+
+[Windows CI №42](https://github.com/Duwkaf1/nydanyda/actions/runs/41824085249) успешен: 147 unit-тестов, production build, нативное приложение, упаковка, сборка и установка реального EXE, запуск установленного приложения, обновление/отмена/обычное и полное удаление, затем публикация. Исходники сборки `953c68aac0d529f95dc73361140993be61ab820a`. [Релиз 0.9.9](https://github.com/Duwkaf1/nydanyda/releases/tag/v0.9.9).
+
+[EXE](https://github.com/Duwkaf1/nydanyda/releases/download/v0.9.9/Yoru-Setup-0.9.9-x64.exe) — **113 525 184 байт**, SHA-256 `55cd75c11546c3cae4555b3a83ec0fbf2a3ace848833a883a2f5293b264c3d5b`. Анонимно проверены публичность репозитория и релиза, точный source SHA, совпадение файла SHA-256 с GitHub digest, HTTP 206, Content-Range с полным размером и сигнатура MZ при загрузке начала EXE. Вход в GitHub для скачивания не нужен.
