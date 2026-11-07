@@ -62,7 +62,7 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     for(const player of webTracks)$('#subtitle-selector').append(option(`online:${player.id}`,`${player.voice} · ${player.player}${player.quality?` · до ${player.quality}p`:""}`));
     if(value?.title.catalog&&!webTracks.length)$('#subtitle-selector').append(option('find-online-subs','Найти оригинал с субтитрами…'));
     $('#subtitle-selector').value = chosen?.id || 'off'; selectTrack();
-    if (!controller && active()?.episode.webPlayers?.length) report('Перевод сайта выбирается в его отдельном окне.');
+    if (!controller && active()?.episode.webPlayers?.length) report('Перевод сайта выбирается в плеере источника внутри Yoru.');
     else if (!choices.length && active()?.watching.audioMode === 'original') report(value?.title.catalog?'Выбери «Найти оригинал с субтитрами», чтобы проверить другие плееры.':'Нет подходящего перевода. Добавь его в параметрах просмотра.');
     else if (!controller) report('Субтитры выключены.');
   }
@@ -76,7 +76,7 @@ export function viewingControls({ $, node, preferences, persist, savePreferences
     try {
       if (window.kadr?.openWebPlayer) await window.kadr.openWebPlayer(page.url);
       else window.open(page.url, '_blank', 'noopener,noreferrer');
-      toast('Плеер сайта открыт отдельно. Перевод, серии и субтитры выбираются в его окне.');
+      toast('Плеер сайта открыт внутри Yoru. Перевод, серии и субтитры выбираются в нём.');
     } catch { toast('Не удалось открыть плеер сайта.'); }
   };
   $('#source-player').onchange=changeSource;$('#quick-source').onchange=changeSource;

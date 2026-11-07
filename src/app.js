@@ -1,3 +1,4 @@
+import {sourceWorkspace} from './source-workspace.js';
 import {playerControls} from './player-controls.js';
 import {onlinePlayback} from './online-playback.js';
 import { PlaybackPlan, validateLibrary, httpsURL, MAX_LIBRARY_TITLES, voiceKey } from './core.js';
@@ -279,7 +280,10 @@ const viewInfo = {
   history: ['Продолжить просмотр', 'Каждая история помнит, где ты остановился.'],
   settings: ['Настройки', 'Уютное оформление и подходящий режим просмотра.'],
 };
+const sources=sourceWorkspace();
+window.addEventListener('yoru-source-opened',()=>{video?.pause();if(online?.current())online.pause();recordProgress(true);setFocusMode(false);});
 function changeView(next, focus = true) {
+  sources.close();
   cancelAnimationFrame(searchTimer); view = next; visibleCount = pageSize();
   for (const item of document.querySelectorAll('[data-view]')) {
     const selected = item.dataset.view === (view === 'watch' ? 'catalog' : view);
@@ -669,7 +673,7 @@ cinema=cinemaView({$,node,state,toast,onWatch(title,episode,time,quality){record
 function setMediaKind(kind){mediaKind=kind;for(const tab of document.querySelectorAll('[data-media-kind]'))tab.setAttribute('aria-pressed',String(tab.dataset.mediaKind===kind));if(kind!=='anime')cinema?.setMedia(kind);}
 for(const button of document.querySelectorAll('[data-media-kind]'))button.onclick=()=>{setMediaKind(button.dataset.mediaKind);changeView('catalog');};
 $('#probe-cinema').onclick=async()=>{const button=$('#probe-cinema');if(!window.kadr?.probeCinema){$('#cinema-network-results').textContent='Проверка доступна в Windows-приложении Yoru.';return;}button.disabled=true;$('#cinema-network-results').textContent='Проверяем соединение…';try{const result=await window.kadr.probeCinema();$('#cinema-network-results').replaceChildren(node('p',`Проверено в ${new Date(result.checkedAt).toLocaleTimeString('ru-RU')}`),...result.results.map(item=>node('p',`${CINEMA_SERVICES[item.service]?.name||({'cinemeta-movie':'Cinemeta · фильмы','cinemeta-series':'Cinemeta · сериалы',tvmaze:'TVmaze · карточка сериала',archive:'Internet Archive'})[item.service]}: ${item.status==='reachable'?(item.kind==='catalog'?`JSON карточек получен (${item.records})`:'страница доступна'):item.status==='restricted'?'доступ ограничен или нужен вход':'соединение не подтверждено'}${item.detail?' · '+item.detail:''}`)));}catch{$('#cinema-network-results').textContent='Не удалось завершить проверку. Попробуй позже.';}finally{button.disabled=false;}};
-document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault();for(const dialog of [$('#cinema-dialog'),$('#release-dialog')])if(dialog.open)dialog.close('search'); changeView('catalog'); (mediaKind==='anime'?discovery:cinema).focus(); } });
+document.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault();sources.close();for(const dialog of [$('#cinema-dialog'),$('#release-dialog')])if(dialog.open)dialog.close('search'); changeView('catalog'); (mediaKind==='anime'?discovery:cinema).focus(); } });
 changeView('catalog', false);
 if (loaded.error) toast(loaded.error);
 

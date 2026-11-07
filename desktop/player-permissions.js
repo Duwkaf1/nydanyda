@@ -1,7 +1,7 @@
 const players=new WeakMap();
 // These are video windows created by Yoru. All other capabilities stay denied.
-export function allowPlayerFullscreen(window,{local=false}={}){
- const contents=window.webContents,session=contents.session;let allowed=players.get(session);
+export function allowPlayerFullscreen(window,{local=false,contents=window.webContents}={}){
+ const session=contents.session;let allowed=players.get(session);
  if(!allowed){allowed=new WeakSet();players.set(session,allowed);
   session.setPermissionRequestHandler((sender,permission,callback)=>callback(permission==='fullscreen'&&allowed.has(sender)));
   session.setPermissionCheckHandler((sender,permission)=>permission==='fullscreen'&&allowed.has(sender));

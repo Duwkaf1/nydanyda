@@ -230,11 +230,11 @@ try {
   await application.context().route('https://old.yummyani.me/**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Website isolation fixture</title>' }));
   const websiteCreated = application.waitForEvent('window'); await page.evaluate(() => window.kadr.openWebPlayer('https://old.yummyani.me/catalog/item/example'));
   const website = await websiteCreated; await website.waitForLoadState('domcontentloaded');
-  assert.equal(await website.evaluate(() => typeof window.kadr), 'undefined'); assert.equal(await website.evaluate(() => typeof window.require), 'undefined');
+  assert.equal(await website.evaluate(() => typeof window.kadr), 'undefined'); assert.equal(await website.evaluate(() => typeof window.require), 'undefined');assert.equal(await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().length),1);assert.equal(await page.locator('video').evaluate(video=>video.paused),true);const pausedBefore=await page.locator('video').evaluate(video=>({src:video.currentSrc,time:video.currentTime}));await page.locator('#source-close').click();assert.equal(await page.locator('video').evaluate(video=>video.paused),true);assert.deepEqual(await page.locator('video').evaluate(video=>({src:video.currentSrc,time:video.currentTime})),pausedBefore);
   await application.context().route('https://anidb.net/**', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>AniDB isolation fixture</title>' }));
   const anidbCreated = application.waitForEvent('window'); await page.evaluate(() => window.kadr.openAniDB({ id: 123 }));
   const aniDB = await anidbCreated; await aniDB.waitForLoadState('domcontentloaded');
-  assert.equal(await aniDB.evaluate(() => typeof window.kadr), 'undefined'); assert.equal(await aniDB.evaluate(() => typeof window.require), 'undefined');
+  assert.equal(await aniDB.evaluate(() => typeof window.kadr), 'undefined'); assert.equal(await aniDB.evaluate(() => typeof window.require), 'undefined');await page.locator('#source-close').click();
   await page.getByRole('button', { name: 'Закрыть плеер', exact: true }).click();
   const rejection = await page.evaluate(async () => { try { await window.kadr.openSource('not-allowed'); return false; } catch { return true; } });
   assert.equal(rejection, true, 'IPC must reject arbitrary destinations');
@@ -244,7 +244,7 @@ try {
   const sourcePage = await sourceCreated;
   await sourcePage.waitForLoadState('domcontentloaded');
   assert.equal(await sourcePage.evaluate(() => typeof window.kadr), 'undefined');
-  assert.equal(await sourcePage.evaluate(() => typeof window.require), 'undefined');
+  assert.equal(await sourcePage.evaluate(() => typeof window.require), 'undefined');await page.locator('#source-close').click();
   await smokeCatalog({application,page,root});
   await smokeAdblock({application,page,root});
   await smokeAutomatic({application,page,root});
@@ -252,13 +252,13 @@ try {
   await smokeCinema({application,page,root});
   assert.deepEqual(errors, []);
   const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-  console.log(`PASS: Electron ${version}; file renderer, posters, settings, real WebM, Video.js switching/state, real ASS WASM canvas, AniDB IPC/cache/XML and isolated website/AniDB/source windows`);
+  console.log(`PASS: Electron ${version}; file renderer, posters, settings, real WebM, Video.js switching/state, real ASS WASM canvas, AniDB IPC/cache/XML and isolated website/AniDB/source views in one window`);
   // Closing the main window must also close sources and exit cleanly.
   const exited = application.waitForEvent('close');
   await page.close();
   await exited;
   application = null;
-  console.log('PASS: main-window close exits the application and its source windows');
+  console.log('PASS: main-window close exits the application and its embedded source');
 } finally {
   if (application) await application.close();
   await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

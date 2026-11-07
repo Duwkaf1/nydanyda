@@ -13,6 +13,7 @@ export async function serveCinema(page,{fail=false,delay=0,recent=false,native=t
  const {cinemaItem}=await import('../src/cinema-provider.js');const provider=url.searchParams.get('provider');const media=url.searchParams.get('media');
  let result;
  if(kind==='cinema-metadata'){const raw=(media==='series'?cinema.series:cinema.movies).metas;result={items:Object.fromEntries(raw.filter(item=>JSON.parse(url.searchParams.get('ids')||'[]').includes(item.id)).map(item=>[item.id,{imdb:Number(item.imdbRating)||null,posterUrl:item.poster||'',year:item.releaseInfo||''}]))};}
+ else if(kind==='cinema-search'){const query=(url.searchParams.get('query')||'').toLowerCase();result={items:[...cinema.movies.metas,...cinema.series.metas].filter(item=>item.name.toLowerCase().includes(query)).map(item=>cinemaItem(item,'cinemeta',item.type)),hasMore:false,total:null,provider:'cinemeta',scope:'title-search'};}
  else if(kind==='cinema-public')result={ratings:{},posterUrl:'',keyless:true};
  else if(kind==='cinema-match')result={kinopoiskId:null,message:'Автоподбор недоступен в этом контролируемом примере.'};
  else if(kind==='cinema-genres')result={genres:['Drama','Crime']};

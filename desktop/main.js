@@ -1,9 +1,10 @@
-import {lordfilmPage,lordfilmCatalogURL,LORDFILM_ORIGIN} from '../src/lordfilm.js';
+import {embeddedSource} from './source-view.js';
+import {lordfilmPage,lordfilmCatalogURL} from '../src/lordfilm.js';
 import {cinemaMirrorPage} from '../src/cinema-mirrors.js';
 import {allowPlayerFullscreen} from './player-permissions.js';
 import {playerMedia} from './player-media.js';
 import {createPlayerProtection} from './player-protection.js';
-import { app, BrowserWindow, ipcMain, net, dialog, shell, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, net, dialog, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
@@ -29,25 +30,10 @@ const userData = profile ? path.resolve(profile) : path.join(app.getPath('appDat
 mkdirSync(userData, { recursive: true });
 app.setPath('userData', userData);
 let mainWindow;
-const sourceWindows = new Map();
-const guardedSessions = new WeakSet();
+let sourceView;
 const anidbCache = new Map(); let lastAniDBRequest = 0; let aniDBBusy = false; let aniDBBlockedUntil = 0;
 const catalogRequests = new Map();
-function openPlayerPage(key, url, title) {
-  if(key.startsWith('cinema-'))for(const [other,window]of sourceWindows)if(other.startsWith('cinema-')&&other!==key)window.close();
-  const existing = sourceWindows.get(key);
-  if (existing && !existing.isDestroyed()) { existing.setTitle(title); if (existing.webContents.getURL() !== url) existing.loadURL(url).catch(() => {}); existing.focus(); return; }
-  const window = new BrowserWindow({ width: 1200, height: 850, title, icon: windowIcon, autoHideMenuBar: true,
-    webPreferences: { partition: `player-${key}`, sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true },
-  });
-  sourceWindows.set(key, window); const session = window.webContents.session;
-  allowPlayerFullscreen(window);
-  if (!guardedSessions.has(session)) { session.on('will-download', event => event.preventDefault()); guardedSessions.add(session); }
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const guard = (event, value) => { try { const target = new URL(value); if (target.protocol !== 'https:' || target.username || target.password || target.port || (key==='cinema-lordfilm'?target.origin!==LORDFILM_ORIGIN:key.startsWith('cinema-')&&!['kinopoisk.cx','www.kinopoisk.cx','kinopoisk.sbs','www.kinopoisk.sbs','kinopoisk.cfd','www.kinopoisk.cfd','sspoisk.ru','www.sspoisk.ru','kinokino.vip','www.kinokino.vip'].includes(target.hostname))) event.preventDefault(); } catch { event.preventDefault(); } };
-  window.webContents.on('will-navigate', guard); window.webContents.on('will-redirect', guard);
-  window.on('closed', () => sourceWindows.delete(key)); window.loadURL(url).catch(() => { if (!window.isDestroyed()) window.setTitle(`${title} — не удалось загрузить`); });
-}
+function openPlayerPage(key,url,title,search){sourceView.open({key,url,title,search});}
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (mainWindow?.isMinimized()) mainWindow.restore(); mainWindow?.focus(); });
@@ -61,7 +47,6 @@ else {
     mainWindow.on('closed', () => {
       for (const controller of catalogRequests.values()) controller.abort(); catalogRequests.clear();
       mainWindow = null;
-      for (const sourceWindow of sourceWindows.values()) sourceWindow.close();
     });
     mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     mainWindow.webContents.on('will-navigate', event => event.preventDefault());
@@ -71,6 +56,7 @@ else {
     const trusted = event => {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('Недоступно');
     };
+    sourceView=embeddedSource({window:mainWindow,ipcMain,trusted});
     const media=playerMedia({ipcMain,window:()=>mainWindow,trusted});
     mainWindow.on('close',()=>media.stop());
     const availability=()=>uninstallAvailability({packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),userData:app.getPath('userData')});
@@ -90,27 +76,15 @@ else {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) return;
       if (typeof requestId === 'string') catalogRequests.get(requestId)?.abort();
     });
-    ipcMain.handle('cinema:lordfilm-browser',(event,media)=>{trusted(event);return shell.openExternal(lordfilmCatalogURL(media));});
     ipcMain.handle('cinema:lordfilm',(event,media)=>{trusted(event);openPlayerPage('cinema-lordfilm',lordfilmCatalogURL(media),'Lordfilm · Yoru');return {opened:true,target:'yoru'};});
-    ipcMain.handle('cinema:open',async(event,data)=>{trusted(event);return openCinemaService(data,{openExternal:url=>shell.openExternal(url),openPlayer:({key,url,title})=>openPlayerPage(key,url,title)});});
+    ipcMain.handle('cinema:open',async(event,data)=>{trusted(event);return openCinemaService(data,{openExternal:url=>openPlayerPage('cinema-'+new URL(url).hostname,url,new URL(url).hostname+' · Yoru'),openPlayer:({key,url,title,search})=>openPlayerPage(key,url,title,search)});});
     let cinemaProbe;
     ipcMain.handle('cinema:probe',async event=>{trusted(event);if(cinemaProbe)return cinemaProbe;cinemaProbe=probeCinema(net.fetch);try{return await cinemaProbe;}finally{cinemaProbe=null;}});
-    ipcMain.handle('player:open', (event, value) => { trusted(event);const lord=lordfilmPage(value);if(lord)return openPlayerPage('cinema-lordfilm',lord,'Lordfilm · Yoru');const mirror=cinemaMirrorPage(value);if(mirror)return openPlayerPage('cinema-'+new URL(mirror.url).hostname,mirror.url,`${new URL(mirror.url).hostname} · Yoru`);const external=externalCinemaLink(value);if(external)return shell.openExternal(external); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
+    ipcMain.handle('player:open', (event, value) => { trusted(event);const lord=lordfilmPage(value);if(lord)return openPlayerPage('cinema-lordfilm',lord,'Lordfilm · Yoru');const mirror=cinemaMirrorPage(value);if(mirror)return openPlayerPage('cinema-'+new URL(mirror.url).hostname,mirror.url,`${new URL(mirror.url).hostname} · Yoru`);const external=externalCinemaLink(value);if(external)return openPlayerPage('cinema-'+new URL(external).hostname,external,new URL(external).hostname+' · Yoru'); const url = webPlayerURL(value); openPlayerPage(new URL(url).hostname, url, `${new URL(url).hostname} · Yoru`); });
     ipcMain.handle('anidb:open', (event, data) => {
       trusted(event);
       const url = data?.wiki === true ? 'https://wiki.anidb.net/HTTP_API_Definition' : anidbPage(data?.id, data?.episodeId);
-      const key = 'anidb'; const existing = sourceWindows.get(key);
-      if (existing && !existing.isDestroyed()) { existing.loadURL(url).catch(() => {}); existing.focus(); return; }
-      const window = new BrowserWindow({ width: 1200, height: 850, title: 'AniDB · Yoru', icon: windowIcon, autoHideMenuBar: true,
-        webPreferences: { partition: 'anidb', sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true },
-      });
-      sourceWindows.set(key, window); const session = window.webContents.session;
-      session.setPermissionRequestHandler((_wc, _p, callback) => callback(false)); session.setPermissionCheckHandler(() => false);
-      if (!guardedSessions.has(session)) { session.on('will-download', event => event.preventDefault()); guardedSessions.add(session); }
-      window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-      const guard = (event, value) => { try { const url = new URL(value); if (url.protocol !== 'https:' || !['anidb.net', 'wiki.anidb.net'].includes(url.hostname)) event.preventDefault(); } catch { event.preventDefault(); } };
-      window.webContents.on('will-navigate', guard); window.webContents.on('will-redirect', guard);
-      window.on('closed', () => sourceWindows.delete(key)); window.loadURL(url).catch(() => { if (!window.isDestroyed()) window.setTitle('AniDB — не удалось загрузить'); });
+      openPlayerPage('anidb',url,'AniDB · Yoru');
     });
     ipcMain.handle('anidb:fetch', async (event, data) => {
       trusted(event); const id = animeId(data?.id);
@@ -134,24 +108,7 @@ else {
       if (event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('Недоступно');
       const source = EXAMPLE_SITES.find(site => site.id === id);
       if (!source) throw new Error('Неизвестный источник');
-      const existing = sourceWindows.get(id);
-      if (existing && !existing.isDestroyed()) { existing.focus(); return; }
-      const window = new BrowserWindow({ width: 1100, height: 800, title: source.name, icon: windowIcon, autoHideMenuBar: true,
-        webPreferences: { partition: `source-${id}`, contextIsolation: true, sandbox: true, nodeIntegration: false, webSecurity: true, allowRunningInsecureContent: false },
-      });
-      sourceWindows.set(id, window);
-      const session = window.webContents.session;
-      allowPlayerFullscreen(window);
-      if (!guardedSessions.has(session)) {
-        session.on('will-download', event => event.preventDefault());
-        guardedSessions.add(session);
-      }
-      window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-      const guard = (event, url) => { try { if (new URL(url).protocol !== 'https:') event.preventDefault(); } catch { event.preventDefault(); } };
-      window.webContents.on('will-navigate', guard);
-      window.webContents.on('will-redirect', guard);
-      window.on('closed', () => sourceWindows.delete(id));
-      window.loadURL(source.url).catch(() => { if (!window.isDestroyed()) window.setTitle(`${source.name} — не удалось загрузить`); });
+      openPlayerPage(id,source.url,source.name);
     });
   });
   app.on('window-all-closed', () => app.quit());

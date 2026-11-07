@@ -1,3 +1,4 @@
+import {requestCinemaSearch} from './cinema-search.js';
 import {requestCinemaMetadata} from './cinema-metadata.js';
 import {requestCinemaPublic} from './cinema-pages.js';
 import {matchCinema} from './cinema-match.js';
@@ -11,6 +12,7 @@ import { boundedText } from '../src/subtitles.js';
 // fixed public API origins are reachable through this bridge.
 export async function requestCatalog(data, { fetcher = globalThis.fetch, signal } = {}) {
   if(data?.kind==='anime-options'||data?.kind==='anime-cast'||data?.kind==='anime-episodes'||data?.kind==='anime-episode-cast')return requestAnimeAutomatic(data,{fetcher,signal});
+  if(data?.kind==='cinema-search')return requestCinemaSearch(data,{fetcher,signal});
   if(data?.kind==='cinema-metadata')return requestCinemaMetadata(data,{fetcher,signal});
   if(data?.kind==='cinema-public')return requestCinemaPublic(data,{fetcher,signal});
   if(data?.kind==='cinema-match')return matchCinema(data,{fetcher,signal});
