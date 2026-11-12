@@ -1,3 +1,4 @@
+import {expect} from '@playwright/test';
 import {checkFullscreen} from './smoke-fullscreen.js';
 import {readFile} from 'node:fs/promises';import path from 'node:path';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
 export async function smokeCinema({application,page,root}){
@@ -74,19 +75,18 @@ async function smokeExternalEpisodes({application,page,root}){
  await remote.waitForURL('https://sr.lordfilm5.pro/series/owned-second.html',{timeout:15000});
  await remote.waitForFunction(()=>{const v=document.querySelector('video');return v&&!v.paused&&v.currentTime>0.1;});
  await remote.locator('video').evaluate(v=>{v.currentTime=18;return v.play();});
- await page.waitForFunction(async()=>((await window.kadr.sourceLastPlayback())?.time||0)>=18);
+ await expect.poll(()=>page.evaluate(async()=>(await window.kadr.sourceLastPlayback())?.time||0),{timeout:10000}).toBeGreaterThanOrEqual(18);
  await page.locator('#source-close').click();
  await page.locator('#source-workspace').waitFor({state:'hidden'});
  const recent=await page.evaluate(()=>window.kadr.sourceLastPlayback());
  assert.ok(recent?.time>=18,'saved external position must remain after closing its window');
- await page.getByRole('button',{name:'История',exact:true}).evaluate(button=>button.click());
+ await page.getByRole('button',{name:'История',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('[data-view="history"]')?.getAttribute('aria-current')==='page',undefined,{timeout:5000});
  await page.locator('#resume-external-playback').waitFor({state:'visible',timeout:5000});
- const [second,opened]=await Promise.all([
+ const [second]=await Promise.all([
   application.waitForEvent('window',{timeout:10000}),
-  page.evaluate(()=>window.kadr.sourceAction('resume')),
+  page.locator('#resume-external-playback').click({timeout:8000}),
  ]);
- assert.equal(opened,true,'history must reopen the saved external page');
  await second.waitForURL('https://sr.lordfilm5.pro/series/owned-second.html');
  await second.waitForFunction(()=>document.querySelector('video')?.currentTime>=18);
  await page.locator('#source-close').click();
