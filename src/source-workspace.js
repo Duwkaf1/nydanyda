@@ -13,7 +13,7 @@ export function sourceWorkspace(){
   for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close('source');
   document.querySelector('#source-title').textContent=value.title;
   otherCatalog.hidden=value.key!=='cinema-lordfilm'||!(value.loadFailed||(value.loading&&value.error))||cinema.hidden;
-  document.querySelector('#source-status').textContent=value.error||(value.loading?'Загружаем страницу…':value.host);
+  document.querySelector('#source-status').textContent=value.error||(value.loading?'Загружаем страницу…':value.playbackStatus||value.host);
   document.querySelector('#source-back').disabled=!value.canBack;document.querySelector('#source-forward').disabled=!value.canForward;
   const signature=JSON.stringify([value.loading,value.audio||[]]);
   if(signature!==audioSignature){audioSignature=signature;audio.replaceChildren();for(const [group,control]of (value.audio||[]).entries())for(const option of control.options){const element=document.createElement('option');element.value=group+':'+option.index;element.textContent=option.label;element.disabled=option.disabled;element.selected=option.selected;audio.append(element);}audio.disabled=!audio.options.length;

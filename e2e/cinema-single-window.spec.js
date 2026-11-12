@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises';
 import {test,expect} from '@playwright/test';
 import {serveCinema} from './cinema-fixtures.js';
 import {cinemaItem} from '../src/cinema-provider.js';
@@ -59,4 +60,25 @@ test('when opening the embedded fallback rejects, the catalog shows the error an
  await expect(page.locator('#cinema-error')).toContainText('Окно источника недоступно.');
  await page.locator('#cinema-other-catalog').click();
  await expect(page.locator('#cinema-provider')).toBeFocused();
+});
+
+test('external next episode control is scoped to actual ended video and ignores unsafe links',async({page})=>{
+ const {sourcePlaybackDOM}=await import('../desktop/source-playback-dom.js');
+ await page.goto('about:blank');
+ const clip=await readFile(new URL('../test/fixtures/playback/episode.webm',import.meta.url));
+ await page.setContent(`<div data-player data-episode-id="s1e2"><video muted style="width:640px;height:360px" src="data:video/webm;base64,${clip.toString('base64')}"></video>
+   <button data-next-episode onclick="document.body.dataset.next='3'">Следующая серия</button></div>
+   <button onclick="document.body.dataset.other='yes'">Следующая серия</button>`);
+ await page.waitForFunction(()=>document.querySelector('video')?.readyState>=2);
+ const run=action=>page.evaluate(({code,action})=>eval('('+code+')')(action),{code:sourcePlaybackDOM.toString(),action});
+ const action={kind:'next',identity:'episode:s1e2'};
+ expect(await run(action)).toBe(false);
+ await page.locator('video').evaluate(v=>{v.currentTime=v.duration-.5;return v.play();});
+ await page.waitForFunction(()=>document.querySelector('video')?.ended);
+ expect(await run({...action,identity:'episode:s1e1'})).toBe(false);
+ expect(await run(action)).toBe(true);
+ await expect(page.locator('body')).toHaveAttribute('data-next','3');
+ await expect(page.locator('body')).not.toHaveAttribute('data-other','yes');
+ await page.locator('[data-next-episode]').evaluate(button=>{button.outerHTML='<a href="https://example.test" data-next-episode>Следующая серия</a>';});
+ expect(await run(action)).toBe(false);
 });

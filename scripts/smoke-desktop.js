@@ -259,6 +259,37 @@ try {
   await exited;
   application = null;
   console.log('PASS: main-window close exits the application and its embedded source');
+  // Real process kill: no renderer unload handlers or graceful application quit.
+  application = await electron.launch({executablePath:process.env.YORU_SMOKE_EXECUTABLE || require('electron'),args,timeout:30000});
+  const crashPage=await application.firstWindow();
+  await crashPage.getByRole('button',{name:'Библиотека',exact:true}).click();
+  const crashTitle={id:'power-cut-test',title:'Проверка отключения',episodes:[1,2].map(number=>({
+    id:'episode-'+number,number,sources:[{id:'ru',voice:'AniLibria',language:'ru',quality:1080,url:'https://media.example.invalid/power-cut.webm'}],
+  }))};
+  await crashPage.locator('#import-file').setInputFiles({name:'power-cut.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify([crashTitle]))});
+  await crashPage.route('https://media.example.invalid/power-cut.webm',route=>route.fulfill({contentType:'video/webm',body:media}));
+  await crashPage.getByRole('button',{name:'Смотреть: Проверка отключения',exact:true}).click();
+  await crashPage.locator('#next-button').click();
+  await crashPage.waitForFunction(()=>document.querySelector('video')?.readyState>=2);
+  await crashPage.locator('video').evaluate(v=>{v.pause();v.currentTime=1.2;});
+  await crashPage.waitForFunction(()=>{
+   const saved=window.kadr.readPlayback()?.progress['power-cut-test'];
+   return saved?.episodeId==='episode-2'&&saved.time>=1;
+  });
+  const killed=application.waitForEvent('close');
+  assert.equal(application.process().kill('SIGKILL'),true);
+  await killed;
+  application=null;
+  application = await electron.launch({executablePath:process.env.YORU_SMOKE_EXECUTABLE || require('electron'),args,timeout:30000});
+  const recovered=await application.firstWindow();
+  await recovered.getByRole('button',{name:'История',exact:true}).click();
+  await recovered.getByRole('button',{name:'Смотреть: Проверка отключения',exact:true}).waitFor();
+  assert.deepEqual(await recovered.evaluate(()=>{
+   const record=window.kadr.readPlayback().progress['power-cut-test'];
+   return [record.episodeId,record.time>=1];
+  }),['episode-2',true]);
+  console.log('PASS: abrupt Electron process kill preserves episode and playback position');
+
 } finally {
   if (application) await application.close();
   await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

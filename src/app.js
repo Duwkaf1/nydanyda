@@ -20,10 +20,13 @@ import {CINEMA_SERVICES} from './cinema-services.js';
 import { bestCatalogQuality } from './anime-catalog.js';
 
 const $ = selector => document.querySelector(selector);
-const loaded = loadState();
+let diskProgress;
+try { diskProgress=window.kadr?.readPlayback?.(); } catch {}
+const loaded = loadState(localStorage,diskProgress);
 const state = loaded.state;
 const preferences = loadPreferences();
 let writable = !loaded.error;
+let diskProgressWarning=false;
 let view = 'catalog';let mediaKind='anime';let cinema;
 let active = null;
 let plan = null;
@@ -93,6 +96,7 @@ function applyPreferences() {
 }
 function updateFooter(){const label={quality:'Качество',balanced:'Баланс',economy:'Производительность',manual:'Свои настройки'}[preferences.profile];$('#footer-mode').textContent=view==='catalog'&&mediaKind!=='anime'?'Качество и доступность видео определяет выбранный сервис':`${label} · ${state.quality}p по умолчанию · Без скачивания серий`;}
 function storePreferences() {
+  syncSourcePreferences();
   try { savePreferences(preferences); $('#settings-save-status').textContent = 'Настройки сохранены'; }
   catch { $('#settings-save-status').textContent = 'Не удалось сохранить настройки. Проверь свободное место.'; toast('Настройки применены только до закрытия приложения: сохранение недоступно.'); }
 }
@@ -174,7 +178,13 @@ function toast(message) {
 }
 function persist(playbackOnly = false) {
   if (!writable) return false;
-  try { if (playbackOnly) savePlaybackState(state); else saveState(state); return true; } catch { writable = false; toast('Не удалось сохранить изменения. Проверь свободное место и настройки хранения.'); return false; }
+  try {
+    const checkpoint=playbackOnly?savePlaybackState(state):saveState(state);
+    window.kadr?.writePlayback?.(checkpoint,!playbackOnly).then(saved=>{if(!saved)throw new Error('Не удалось записать прогресс.');}).catch(()=>{
+      if(!diskProgressWarning){diskProgressWarning=true;toast('Не удалось записать резервную копию прогресса на диск.');}
+    });
+    return true;
+  } catch { writable = false; toast('Не удалось сохранить изменения. Проверь свободное место и настройки хранения.'); return false; }
 }
 function status(message) { $('#playback-status').textContent = message; }
 function recordProgress(force = false) {
@@ -281,10 +291,24 @@ const viewInfo = {
   settings: ['Настройки', 'Уютное оформление и подходящий режим просмотра.'],
 };
 const sources=sourceWorkspace();
+const syncSourcePreferences=()=>window.kadr?.sourcePreferences?.({autoNext:preferences.autoNext,timeoutSeconds:preferences.playback.timeoutSeconds}).catch(()=>{});
+syncSourcePreferences();
+const externalResume=$('#resume-external-playback');
+externalResume.onclick=()=>window.kadr?.sourceAction?.('resume').catch(()=>toast('Не удалось открыть последний внешний источник.'));
+async function updateExternalResume(){
+ externalResume.hidden=true;
+ if(view!=='history')return;
+ const recent=await window.kadr?.sourceLastPlayback?.().catch(()=>null);
+ if(view==='history'&&recent){
+  externalResume.hidden=false;
+  externalResume.textContent='Продолжить во внешнем плеере · '+Math.floor(recent.time/60)+':'+String(Math.floor(recent.time%60)).padStart(2,'0');
+  externalResume.title=recent.title;
+ }
+}
 window.addEventListener('yoru-source-opened',()=>{video?.pause();if(online?.current())online.pause();recordProgress(true);setFocusMode(false);});
 function changeView(next, focus = true) {
   sources.close();
-  cancelAnimationFrame(searchTimer); view = next; visibleCount = pageSize();
+  cancelAnimationFrame(searchTimer); view = next; updateExternalResume(); visibleCount = pageSize();
   for (const item of document.querySelectorAll('[data-view]')) {
     const selected = item.dataset.view === (view === 'watch' ? 'catalog' : view);
     item.classList.toggle('active', selected);
