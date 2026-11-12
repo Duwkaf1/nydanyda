@@ -16,3 +16,47 @@ test('source audio reads actual choices, dispatches change and rejects stale lab
 test('the source workspace fits narrow and zoomed layouts and renders only source-reported dubbing',async({page})=>{
  await serveCinema(page);await page.addInitScript(()=>{window.__sourceActions=[];window.kadr={sourceAction:async value=>window.__sourceActions.push(value),sourceBounds:async rect=>window.__sourceRect=rect,onSourceState:callback=>window.__sourceUpdate=callback};});await page.goto('http://127.0.0.1:5173');await page.evaluate(()=>window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sm.lordfilm5.pro',revision:1,audio:[{options:[{index:0,label:'Русский · Проверочная студия',selected:true}]}]}));await expect(page.locator('#source-workspace')).toBeVisible();await expect(page.locator('#source-audio option')).toHaveText('Русский · Проверочная студия');expect(await page.evaluate(()=>{const option=document.querySelector('#source-audio option');window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sm.lordfilm5.pro',revision:2,audio:[{options:[{index:0,label:'Русский · Проверочная студия',selected:true}]}]});return option===document.querySelector('#source-audio option');})).toBe(true);await page.keyboard.press('Control+k');await expect(page.locator('#source-search')).toBeFocused();await expect(page.locator('#source-workspace')).toBeVisible();for(const width of [1320,640,400]){await page.setViewportSize({width,height:900});await expect.poll(()=>page.evaluate(()=>document.querySelector('#source-workspace').scrollWidth<=document.querySelector('#source-workspace').clientWidth+1)).toBe(true);}await page.setViewportSize({width:1320,height:900});await page.screenshot({path:'test-results/cinema-single-window-controls.png',animations:'disabled'});await page.locator('#source-close').click();expect(await page.evaluate(()=>window.__sourceActions.at(-1))).toBe('close');
 });
+
+test('after both movie catalogs fail, the embedded error leads back to the alternate catalog selector',async({page})=>{
+ await serveCinema(page);
+ await page.route('**/__yoru/catalog?**',route=>{
+  const {searchParams}=new URL(route.request().url());
+  if(searchParams.get('kind')!=='cinema-list'||searchParams.get('provider')!=='cinemeta')return route.fallback();
+  return route.fulfill({status:503,json:{error:'Cinemeta HTTP 503'}});
+ });
+ await page.addInitScript(()=>{
+  window.kadr={
+   onSourceState:callback=>window.__sourceUpdate=callback,
+   openLordfilm:async()=>window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sm.lordfilm5.pro',loading:true}),
+   sourceAction:async action=>{if(action==='close')window.__sourceUpdate({open:false});},
+  };
+ });
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'Фильмы',exact:true}).click();
+ const alternate=page.locator('#source-other-catalog');
+ await expect(page.locator('#source-status')).toHaveText('Загружаем страницу…');
+ await expect(alternate).toBeHidden();
+ await page.evaluate(()=>window.__sourceUpdate({
+  open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',error:'Не удалось открыть Lordfilm (код -105).',loadFailed:true,
+ }));
+ await expect(page.locator('#source-status')).toContainText('код -105');
+ await alternate.click();
+ await expect(page.locator('#source-workspace')).toBeHidden();
+ await expect(page.locator('#cinema-error')).toContainText('Cinemeta HTTP 503');
+ await expect(page.locator('#cinema-status')).toBeEmpty();
+ const provider=page.locator('#cinema-provider');
+ await expect(provider).toBeFocused();
+ await provider.selectOption('archive');
+ await expect(page.locator('#cinema-grid')).toContainText('Проверочный фильм');
+});
+
+test('when opening the embedded fallback rejects, the catalog shows the error and a recovery action',async({page})=>{
+ await serveCinema(page,{fail:true});
+ await page.addInitScript(()=>{window.kadr={openLordfilm:async()=>{throw new Error('Окно источника недоступно.');}};});
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'Фильмы',exact:true}).click();
+ await expect(page.locator('#cinema-status')).toHaveText('Cinemeta и Lordfilm недоступны');
+ await expect(page.locator('#cinema-error')).toContainText('Окно источника недоступно.');
+ await page.locator('#cinema-other-catalog').click();
+ await expect(page.locator('#cinema-provider')).toBeFocused();
+});

@@ -5,15 +5,15 @@ const downloadSessions=new WeakSet();
 
 export function embeddedSource({window,ipcMain,trusted}){
  const scans=new WeakSet();
- let view,key='',title='',origin='',bounds,full=false,error='',revision=0,audio=[],audioTimer,loadTimer,pendingSearch;
- const notify=()=>{if(!window.isDestroyed())window.webContents.send('source-view:state',view?{open:true,key,title,host:origin?new URL(origin).hostname:'',loading:view.webContents.isLoading(),error,canBack:view.webContents.navigationHistory.canGoBack(),canForward:view.webContents.navigationHistory.canGoForward(),revision,audio}:{open:false});};
+ let view,key='',title='',origin='',bounds,full=false,error='',loadFailed=false,revision=0,audio=[],audioTimer,loadTimer,pendingSearch;
+ const notify=()=>{if(!window.isDestroyed())window.webContents.send('source-view:state',view?{open:true,key,title,host:origin?new URL(origin).hostname:'',loading:view.webContents.isLoading(),error,loadFailed,canBack:view.webContents.navigationHistory.canGoBack(),canForward:view.webContents.navigationHistory.canGoForward(),revision,audio}:{open:false});};
  const place=()=>{if(!view||window.isDestroyed())return;const [width,height]=window.getContentSize();if(full){view.setBounds({x:0,y:0,width,height});return;}const zoom=window.webContents.getZoomFactor(),r=bounds;const x=Math.max(0,Math.min(width,Math.round((r?.x||0)*zoom))),y=Math.max(0,Math.min(height,Math.round((r?.y||0)*zoom)));view.setBounds({x,y,width:Math.max(0,Math.min(width-x,Math.round((r?.width||0)*zoom))),height:Math.max(0,Math.min(height-y,Math.round((r?.height||0)*zoom)))});};
  async function scanAudio(){const current=view;if(!current||scans.has(current)||current.webContents.isDestroyed())return;scans.add(current);const ticket=++revision;try{const found=[];const frames=current.webContents.mainFrame.framesInSubtree.slice(0,24);await Promise.all(frames.map(async frame=>{try{const controls=await frame.executeJavaScript(sourceAudioScript());for(const control of controls)found.push({...control,frame:frame.routingId,process:frame.processId});}catch{}}));if(current!==view||ticket!==revision)return;audio=found.sort((a,b)=>a.process-b.process||a.frame-b.frame||a.control-b.control);notify();}finally{scans.delete(current);}}
  function close(){clearInterval(audioTimer);clearTimeout(loadTimer);revision++;audio=[];if(view){const previous=view;view=undefined;window.contentView.removeChildView(previous);if(!previous.webContents.isDestroyed())previous.webContents.close();}full=false;bounds=undefined;notify();}
  function open(data){
   const url=new URL(data.url);if(url.protocol!=='https:'||url.username||url.password||url.port)throw new Error('Недопустимый адрес источника.');
   if(view&&key===data.key&&view.webContents.getURL()===url.href){notify();return;}
-  close();key=data.key;title=data.title;origin=url.origin;error='';pendingSearch=key==='cinema-lordfilm'&&typeof data.search==='string'?data.search.slice(0,100):'';
+  close();key=data.key;title=data.title;origin=url.origin;error='';loadFailed=false;pendingSearch=key==='cinema-lordfilm'&&typeof data.search==='string'?data.search.slice(0,100):'';
   view=new WebContentsView({webPreferences:{partition:`player-${key}`,sandbox:true,contextIsolation:true,nodeIntegration:false,webSecurity:true,allowRunningInsecureContent:false}});
   const current=view,contents=current.webContents;
   window.contentView.addChildView(current);place();allowPlayerFullscreen(window,{contents});
@@ -24,12 +24,12 @@ export function embeddedSource({window,ipcMain,trusted}){
   // Some legitimate cards use target=_blank. Keep same-site navigation here;
   // cross-site popups and advertisements cannot create another window.
   contents.setWindowOpenHandler(({url})=>{if(permitted(url))contents.loadURL(url).catch(()=>{});return {action:'deny'};});
-  contents.on('did-start-loading',()=>{if(current!==view)return;error='';audio=[];revision++;notify();clearTimeout(loadTimer);loadTimer=setTimeout(()=>{if(current===view&&contents.isLoading()){error='Источник долго загружается. Можно подождать или обновить страницу.';notify();}},20000);});
-  contents.on('did-stop-loading',()=>{if(current!==view)return;clearTimeout(loadTimer);notify();scanAudio();if(pendingSearch){const query=pendingSearch;pendingSearch='';search(query).catch(()=>{if(current===view){error='Введи название в поиске на странице источника.';notify();}});}});
+  contents.on('did-start-loading',()=>{if(current!==view)return;error='';loadFailed=false;audio=[];revision++;notify();clearTimeout(loadTimer);loadTimer=setTimeout(()=>{if(current===view&&contents.isLoading()){error='Источник долго загружается. Можно подождать или обновить страницу.';notify();}},20000);});
+  contents.on('did-stop-loading',()=>{if(current!==view)return;clearTimeout(loadTimer);if(!loadFailed)error='';notify();scanAudio();if(pendingSearch&&!loadFailed){const query=pendingSearch;pendingSearch='';search(query).catch(()=>{if(current===view&&!loadFailed){error='Введи название в поиске на странице источника.';notify();}});}});
   contents.on('did-navigate-in-page',()=>{if(current===view)notify();});
-  contents.on('did-fail-load',(_event,code,_description,_url,isMain)=>{if(current!==view||!isMain||code===-3)return;error=`Не удалось открыть ${new URL(origin).hostname} (код ${code}). Проверь соединение или выбери другой источник.`;notify();});
+  contents.on('did-fail-load',(_event,code,_description,_url,isMain)=>{if(current!==view||!isMain||code===-3)return;loadFailed=true;pendingSearch='';error=`Не удалось открыть ${new URL(origin).hostname} (код ${code}). Проверь соединение или выбери другой источник.`;notify();});
   contents.on('enter-html-full-screen',()=>{if(current===view){full=true;place();}});contents.on('leave-html-full-screen',()=>{full=false;place();});
-  contents.on('render-process-gone',()=>{if(current===view){error='Страница источника остановилась. Нажми «Обновить».';notify();}});
+  contents.on('render-process-gone',()=>{if(current===view){loadFailed=true;error='Страница источника остановилась. Нажми «Обновить».';notify();}});
   audioTimer=setInterval(scanAudio,5000);notify();contents.loadURL(url.href).catch(()=>{});
  }
  const handle=(channel,callback)=>ipcMain.handle(channel,(event,data)=>{trusted(event);return callback(data);});
