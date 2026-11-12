@@ -76,10 +76,14 @@ async function smokeExternalEpisodes({application,page,root}){
  await remote.locator('video').evaluate(v=>{v.currentTime=18;return v.play();});
  await page.waitForFunction(async()=>((await window.kadr.sourceLastPlayback())?.time||0)>=18);
  await page.locator('#source-close').click();
+ await page.locator('#source-workspace').waitFor({state:'hidden'});
  await page.getByRole('button',{name:'История',exact:true}).click();
- const restored=application.waitForEvent('window');
- await page.locator('#resume-external-playback').click();
- const second=await restored;
+ await page.locator('#resume-external-playback').waitFor({state:'visible',timeout:5000});
+ const [second,opened]=await Promise.all([
+  application.waitForEvent('window',{timeout:10000}),
+  page.evaluate(()=>window.kadr.sourceAction('resume')),
+ ]);
+ assert.equal(opened,true,'history must reopen the saved external page');
  await second.waitForURL('https://sr.lordfilm5.pro/series/owned-second.html');
  await second.waitForFunction(()=>document.querySelector('video')?.currentTime>=18);
  await page.locator('#source-close').click();

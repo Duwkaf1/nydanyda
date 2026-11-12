@@ -294,7 +294,10 @@ const sources=sourceWorkspace();
 const syncSourcePreferences=()=>window.kadr?.sourcePreferences?.({autoNext:preferences.autoNext,timeoutSeconds:preferences.playback.timeoutSeconds}).catch(()=>{});
 syncSourcePreferences();
 const externalResume=$('#resume-external-playback');
-externalResume.onclick=()=>window.kadr?.sourceAction?.('resume').catch(()=>toast('Не удалось открыть последний внешний источник.'));
+externalResume.onclick=async()=>{
+ try {if(await window.kadr?.sourceAction?.('resume'))return;} catch {}
+ toast('Не удалось открыть последний внешний источник.');
+};
 async function updateExternalResume(){
  externalResume.hidden=true;
  if(view!=='history')return;

@@ -82,3 +82,19 @@ test('external next episode control is scoped to actual ended video and ignores 
  await page.locator('[data-next-episode]').evaluate(button=>{button.outerHTML='<a href="https://example.test" data-next-episode>Следующая серия</a>';});
  expect(await run(action)).toBe(false);
 });
+
+test('history offers the saved external episode and requests resume from the button',async({page})=>{
+ await serveCinema(page);
+ await page.addInitScript(()=>{
+  window.__sourceActions=[];
+  window.kadr={
+   sourceLastPlayback:async()=>({title:'Проверочный сериал',time:73}),
+   sourceAction:async action=>{window.__sourceActions.push(action);return true;},
+  };
+ });
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'История',exact:true}).click();
+ const resume=page.getByRole('button',{name:'Продолжить во внешнем плеере · 1:13'});
+ await resume.click();
+ await expect.poll(()=>page.evaluate(()=>window.__sourceActions.at(-1))).toBe('resume');
+});
