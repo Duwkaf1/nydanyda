@@ -25,7 +25,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - name: Check cinema search, source selection and recovery
-        run: npm run test:e2e -- e2e/cinema-single-window.spec.js e2e/cinema-recovery.spec.js
+        run: npm run test:e2e -- e2e/cinema-single-window.spec.js e2e/cinema-recovery.spec.js e2e/cinema-keyless.spec.js e2e/cinema.spec.js
 
   installer-ui:
     runs-on: windows-latest
