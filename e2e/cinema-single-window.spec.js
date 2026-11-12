@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises';
 import {test,expect} from '@playwright/test';
 import {serveCinema} from './cinema-fixtures.js';
 import {cinemaItem} from '../src/cinema-provider.js';
@@ -14,5 +15,86 @@ test('source audio reads actual choices, dispatches change and rejects stale lab
  await page.goto('about:blank');await page.setContent('<select name="translation" onchange="document.body.dataset.changed=this.selectedIndex"><option value="https://secret.test/one">Русский · A</option><option value="https://secret.test/two">Русский · B</option><option disabled>Недоступно</option></select><select name="quality"><option>1080</option></select>');const run=action=>page.evaluate(({code,action})=>eval('('+code+')')(action),{code:sourceAudioDOM.toString(),action});const result=await run();expect(result).toHaveLength(1);expect(JSON.stringify(result)).not.toContain('secret');await run({kind:'select',control:0,index:1,label:'Русский · B'});await expect(page.locator('body')).toHaveAttribute('data-changed','1');await expect(page.locator('select[name="translation"]')).toHaveJSProperty('selectedIndex',1);await expect(run({kind:'select',control:0,index:0,label:'Stale option'})).rejects.toThrow('Список озвучек изменился');
 });
 test('the source workspace fits narrow and zoomed layouts and renders only source-reported dubbing',async({page})=>{
- await serveCinema(page);await page.addInitScript(()=>{window.__sourceActions=[];window.kadr={sourceAction:async value=>window.__sourceActions.push(value),sourceBounds:async rect=>window.__sourceRect=rect,onSourceState:callback=>window.__sourceUpdate=callback};});await page.goto('http://127.0.0.1:5173');await page.evaluate(()=>window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sm.lordfilm5.pro',revision:1,audio:[{options:[{index:0,label:'Русский · Проверочная студия',selected:true}]}]}));await expect(page.locator('#source-workspace')).toBeVisible();await expect(page.locator('#source-audio option')).toHaveText('Русский · Проверочная студия');expect(await page.evaluate(()=>{const option=document.querySelector('#source-audio option');window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sm.lordfilm5.pro',revision:2,audio:[{options:[{index:0,label:'Русский · Проверочная студия',selected:true}]}]});return option===document.querySelector('#source-audio option');})).toBe(true);await page.keyboard.press('Control+k');await expect(page.locator('#source-search')).toBeFocused();await expect(page.locator('#source-workspace')).toBeVisible();for(const width of [1320,640,400]){await page.setViewportSize({width,height:900});await expect.poll(()=>page.evaluate(()=>document.querySelector('#source-workspace').scrollWidth<=document.querySelector('#source-workspace').clientWidth+1)).toBe(true);}await page.setViewportSize({width:1320,height:900});await page.screenshot({path:'test-results/cinema-single-window-controls.png',animations:'disabled'});await page.locator('#source-close').click();expect(await page.evaluate(()=>window.__sourceActions.at(-1))).toBe('close');
+ await serveCinema(page);await page.addInitScript(()=>{window.__sourceActions=[];window.kadr={sourceAction:async value=>window.__sourceActions.push(value),sourceBounds:async rect=>window.__sourceRect=rect,onSourceState:callback=>window.__sourceUpdate=callback};});await page.goto('http://127.0.0.1:5173');await page.evaluate(()=>window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sr.lordfilm5.pro',revision:1,audio:[{options:[{index:0,label:'Русский · Проверочная студия',selected:true}]}]}));await expect(page.locator('#source-workspace')).toBeVisible();await expect(page.locator('#source-audio option')).toHaveText('Русский · Проверочная студия');expect(await page.evaluate(()=>{const option=document.querySelector('#source-audio option');window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sr.lordfilm5.pro',revision:2,audio:[{options:[{index:0,label:'Русский · Проверочная студия',selected:true}]}]});return option===document.querySelector('#source-audio option');})).toBe(true);await page.keyboard.press('Control+k');await expect(page.locator('#source-search')).toBeFocused();await expect(page.locator('#source-workspace')).toBeVisible();for(const width of [1320,640,400]){await page.setViewportSize({width,height:900});await expect.poll(()=>page.evaluate(()=>document.querySelector('#source-workspace').scrollWidth<=document.querySelector('#source-workspace').clientWidth+1)).toBe(true);}await page.setViewportSize({width:1320,height:900});await page.screenshot({path:'test-results/cinema-single-window-controls.png',animations:'disabled'});await page.locator('#source-close').click();expect(await page.evaluate(()=>window.__sourceActions.at(-1))).toBe('close');
+});
+
+test('after both movie catalogs fail, the embedded error leads back to the alternate catalog selector',async({page})=>{
+ await serveCinema(page);
+ await page.route('**/__yoru/catalog?**',route=>{
+  const {searchParams}=new URL(route.request().url());
+  if(searchParams.get('kind')!=='cinema-list'||searchParams.get('provider')!=='cinemeta')return route.fallback();
+  return route.fulfill({status:503,json:{error:'Cinemeta HTTP 503'}});
+ });
+ await page.addInitScript(()=>{
+  window.kadr={
+   onSourceState:callback=>window.__sourceUpdate=callback,
+   openLordfilm:async()=>window.__sourceUpdate({open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',host:'sr.lordfilm5.pro',loading:true}),
+   sourceAction:async action=>{if(action==='close')window.__sourceUpdate({open:false});},
+  };
+ });
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'Фильмы',exact:true}).click();
+ const alternate=page.locator('#source-other-catalog');
+ await expect(page.locator('#source-status')).toHaveText('Загружаем страницу…');
+ await expect(alternate).toBeHidden();
+ await page.evaluate(()=>window.__sourceUpdate({
+  open:true,key:'cinema-lordfilm',title:'Lordfilm · Yoru',error:'Не удалось открыть Lordfilm (код -105).',loadFailed:true,
+ }));
+ await expect(page.locator('#source-status')).toContainText('код -105');
+ await alternate.click();
+ await expect(page.locator('#source-workspace')).toBeHidden();
+ await expect(page.locator('#cinema-error')).toContainText('Cinemeta HTTP 503');
+ await expect(page.locator('#cinema-status')).toBeEmpty();
+ const provider=page.locator('#cinema-provider');
+ await expect(provider).toBeFocused();
+ await provider.selectOption('archive');
+ await expect(page.locator('#cinema-grid')).toContainText('Проверочный фильм');
+});
+
+test('when opening the embedded fallback rejects, the catalog shows the error and a recovery action',async({page})=>{
+ await serveCinema(page,{fail:true});
+ await page.addInitScript(()=>{window.kadr={openLordfilm:async()=>{throw new Error('Окно источника недоступно.');}};});
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'Фильмы',exact:true}).click();
+ await expect(page.locator('#cinema-status')).toHaveText('Cinemeta и Lordfilm недоступны');
+ await expect(page.locator('#cinema-error')).toContainText('Окно источника недоступно.');
+ await page.locator('#cinema-other-catalog').click();
+ await expect(page.locator('#cinema-provider')).toBeFocused();
+});
+
+test('external next episode control is scoped to actual ended video and ignores unsafe links',async({page})=>{
+ const {sourcePlaybackDOM}=await import('../desktop/source-playback-dom.js');
+ await page.goto('about:blank');
+ const clip=await readFile(new URL('../test/fixtures/playback/episode.webm',import.meta.url));
+ await page.setContent(`<div data-player data-episode-id="s1e2"><video muted style="width:640px;height:360px" src="data:video/webm;base64,${clip.toString('base64')}"></video>
+   <button data-next-episode onclick="document.body.dataset.next='3'">Следующая серия</button></div>
+   <button onclick="document.body.dataset.other='yes'">Следующая серия</button>`);
+ await page.waitForFunction(()=>document.querySelector('video')?.readyState>=2);
+ const run=action=>page.evaluate(({code,action})=>eval('('+code+')')(action),{code:sourcePlaybackDOM.toString(),action});
+ const action={kind:'next',identity:'episode:s1e2'};
+ expect(await run(action)).toBe(false);
+ await page.locator('video').evaluate(v=>{v.currentTime=v.duration-.5;return v.play();});
+ await page.waitForFunction(()=>document.querySelector('video')?.ended);
+ expect(await run({...action,identity:'episode:s1e1'})).toBe(false);
+ expect(await run(action)).toBe(true);
+ await expect(page.locator('body')).toHaveAttribute('data-next','3');
+ await expect(page.locator('body')).not.toHaveAttribute('data-other','yes');
+ await page.locator('[data-next-episode]').evaluate(button=>{button.outerHTML='<a href="https://example.test" data-next-episode>Следующая серия</a>';});
+ expect(await run(action)).toBe(false);
+});
+
+test('history offers the saved external episode and requests resume from the button',async({page})=>{
+ await serveCinema(page);
+ await page.addInitScript(()=>{
+  window.__sourceActions=[];
+  window.kadr={
+   sourceLastPlayback:async()=>({title:'Проверочный сериал',time:73}),
+   sourceAction:async action=>{window.__sourceActions.push(action);return true;},
+  };
+ });
+ await page.goto('http://127.0.0.1:5173');
+ await page.getByRole('button',{name:'История',exact:true}).click();
+ const resume=page.getByRole('button',{name:'Продолжить во внешнем плеере · 1:13'});
+ await resume.click();
+ await expect.poll(()=>page.evaluate(()=>window.__sourceActions.at(-1))).toBe('resume');
 });

@@ -2,15 +2,17 @@ import { validateLibrary } from './core.js';
 const KEY = 'kadr.library.v1';
 const PLAYBACK_KEY = 'kadr.playback.v1';
 export const emptyState = () => ({ titles: [], favorites: [], progress: {}, quality: 1080 });
-export function loadState(storage = localStorage) {
+export function loadState(storage = localStorage, durable = null) {
   try {
     const raw = storage.getItem(KEY);
     const data = raw ? JSON.parse(raw) : emptyState();
     const playbackRaw = storage.getItem(PLAYBACK_KEY);
-    if (playbackRaw) {
-      const playback = JSON.parse(playbackRaw);
-      if (playback && typeof playback === 'object') { data.progress = playback.progress; data.quality = playback.quality; }
-    }
+    let playback;
+    try { playback = playbackRaw ? JSON.parse(playbackRaw) : null; }
+    catch (error) { if (!durable) throw error; }
+    if (durable && durable.progress && typeof durable.progress==='object' && Number.isFinite(durable.savedAt)
+      && durable.savedAt >= (playback?.savedAt || 0)) playback=durable;
+    if (playback && typeof playback === 'object') { data.progress = playback.progress; data.quality = playback.quality; }
     const titles = validateLibrary(data.titles);
     const ids = new Set(titles.map(t => t.id));
     const progress = {};
@@ -26,11 +28,15 @@ export function loadState(storage = localStorage) {
     return { state: emptyState(), error: 'Не удалось прочитать библиотеку. Исходные данные сохранены; запись отключена до перезапуска после исправления данных.' };
   }
 }
-export function savePlaybackState(state, storage = localStorage) { storage.setItem(PLAYBACK_KEY, JSON.stringify({ progress: state.progress, quality: state.quality })); }
+export function savePlaybackState(state, storage = localStorage) {
+  const checkpoint={progress:state.progress,quality:state.quality,savedAt:Date.now()};
+  storage.setItem(PLAYBACK_KEY,JSON.stringify(checkpoint));
+  return checkpoint;
+}
 export function saveState(state, storage = localStorage) {
   // Catalog media URLs expire. Store episode identities and personal additions,
   // then fetch fresh streams automatically when opening the anime again.
   const titles = state.titles.map(title => title.catalog ? { ...title, episodes: title.episodes.map(ep => ({ ...ep, onlinePlayers:undefined, sources: ep.sources.filter(source => !source.id.startsWith('catalog:anilibria:')) })) } : title);
   storage.setItem(KEY, JSON.stringify({ ...state, titles }));
-  savePlaybackState(state, storage);
+  return savePlaybackState(state, storage);
 }

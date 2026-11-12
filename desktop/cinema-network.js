@@ -2,6 +2,7 @@ import {matchesCinema} from '../src/cinema-filters.js';
 import {cinemaJSON,cinemaFailure} from './cinema-http.js';
 import {recentTVmaze} from './tvmaze-recent.js';
 import {cinemaArgs,cinemaURL,cinemaItem,cinemaContentAllowed} from '../src/cinema-provider.js';
+import {cinemaIdentity} from '../src/cinema-identities.js';
 export async function requestCinema(data,{fetcher=globalThis.fetch,signal}={}){
  cinemaArgs(data);const timeout=AbortSignal.timeout(22000);const total=signal?AbortSignal.any([signal,timeout]):timeout;
  async function run(args,first){
@@ -9,9 +10,15 @@ export async function requestCinema(data,{fetcher=globalThis.fetch,signal}={}){
   const get=url=>cinemaJSON(url,{fetcher,signal:deadline});
   if(args.kind==='cinema-genres'){const raw=await get(cinemaURL(args));const catalog=raw.catalogs?.find(item=>item.type===args.media&&item.id==='top');const options=catalog?.extra?.find(extra=>extra.name==='genre')?.options;if(!Array.isArray(options))throw new Error('Список жанров временно недоступен.');return {genres:options.filter(value=>typeof value==='string'&&value.length<=60&&!/^(anime|аниме)$/i.test(value)).slice(0,80)};}
   if(args.kind==='cinema-detail'){
-   const raw=await get(cinemaURL(args));const item=cinemaItem(args.provider==='cinemeta'?raw.meta:raw,args.provider,args.media);
-   if(!item||item.sourceId!==args.id)throw new Error('Сервис вернул другую карточку. Повтори открытие.');
-   return {item,...(args.provider==='archive'?{archive:raw}:{})};
+   const exact=args.provider==='cinemeta'?cinemaIdentity(args.media,args.id):undefined;
+   try{
+    const raw=await get(cinemaURL(args));const item=cinemaItem(args.provider==='cinemeta'?raw.meta:raw,args.provider,args.media);
+    if(!item||item.sourceId!==args.id)throw new Error('Сервис вернул другую карточку. Повтори открытие.');
+    return {item:exact?{...exact,...item}:item,...(args.provider==='archive'?{archive:raw}:{})};
+   }catch(error){
+    if(!exact||signal?.aborted)throw error;
+    return {item:{...exact,metadataLimited:true}};
+   }
   }
   if(args.provider==='archive'){
    const raw=await get(cinemaURL(args));if(!Array.isArray(raw.response?.docs))throw new Error('Каталог фильмов вернул неизвестный ответ.');

@@ -3,16 +3,23 @@ const cache=new Map();let bytes=0;
 export class CinemaHTTPError extends Error {
  constructor(url,code){const host=new URL(url).hostname;super(`${host}: ${code}`);this.name='CinemaHTTPError';this.code=code;this.host=host;}
 }
+function allowedRedirect(original, next){
+ if(next.username||next.password)return false;
+ if(next.origin===original.origin)return true;
+ return original.origin==='https://v3-cinemeta.strem.io'&&next.origin==='https://cinemeta-live.strem.io'
+  && /^\/meta\/(?:movie|series)\/tt\d{7,10}\.json$/.test(original.pathname)
+  && next.pathname===original.pathname && !next.search && !next.hash;
+}
 export async function cinemaJSON(url,{fetcher=globalThis.fetch,signal,fresh=false}={}){
  signal?.throwIfAborted();const old=cache.get(url);if(!fresh&&old&&Date.now()-old.time<120000)return old.value;
- let response,target=url;
+ let response,target=url;const original=new URL(url);
  try{
   for(let redirects=0;redirects<4;redirects++){
    response=await fetcher(target,{credentials:'omit',redirect:'manual',signal,headers:{Accept:'application/json'}});
    if(![301,302,303,307,308].includes(response.status))break;
    const location=response.headers.get('location');await response.body?.cancel();
    let next;try{next=new URL(location,target);}catch{throw new CinemaHTTPError(url,'REDIRECT');}
-   if(!location||redirects===3||next.origin!==new URL(url).origin||next.username||next.password)throw new CinemaHTTPError(url,'REDIRECT');
+   if(!location||redirects===3||!allowedRedirect(original,next))throw new CinemaHTTPError(url,'REDIRECT');
    target=next.href;
   }
  }catch(error){if(error instanceof CinemaHTTPError)throw error;throw new CinemaHTTPError(url,signal?.aborted?'TIMEOUT':/ERR_NAME_NOT_RESOLVED|ENOTFOUND|EAI_AGAIN/.test(String(error.cause?.code||error.message))?'DNS':'NETWORK');}

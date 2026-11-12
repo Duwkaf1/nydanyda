@@ -1,10 +1,11 @@
 import {lordfilmCatalogURL,lordfilmPage} from './lordfilm.js';
-import {CINEMA_MIRRORS,cinemaMirrorURL,cinemaMirrorPage} from './cinema-mirrors.js';
+import {CINEMA_MIRRORS,cinemaMirrorURL,cinemaMirrorPage,kinopoiskPage} from './cinema-mirrors.js';
 export const CINEMA_SERVICES={lordfilm:{name:'Lordfilm',kind:'catalog',hint:'Каталог и просмотр — в главном окне Yoru. Фильм, сезон и серию выбери на странице источника.'},...Object.fromEntries(Object.entries(CINEMA_MIRRORS).map(([id,info])=>[id,{name:info.name,kind:'player',hint:'Плеер откроется в Yoru по ID Кинопоиска. Сезон, серия, качество и перевод выбираются внутри плеера.'}])),youtube:{name:'YouTube',hint:'Поиск видео на YouTube. Полная версия может быть недоступна.'},kinopoisk:{name:'Кинопоиск',hint:'Может потребоваться подписка. Воспроизведение зависит от региона.'},rutube:{name:'Rutube',hint:'Поиск видео на Rutube. Доступность полной версии определяет сервис.'},vkvideo:{name:'VK Видео',hint:'Может потребоваться вход. Доступность видео определяет сервис.'}};
 export function cinemaServiceURL(service,item,episode){
  if(!Object.hasOwn(CINEMA_SERVICES,service)||typeof item?.title!=='string'||!item.title.trim()||item.title.length>160||!['movie','series'].includes(item.media))throw new Error('Не удалось открыть сервис.');
  if(episode&&(!Number.isInteger(episode.season)||episode.season<1||episode.season>100||!Number.isInteger(episode.number)||episode.number<1||episode.number>10000))throw new Error('Некорректная серия.');
  if(service==='lordfilm')return lordfilmCatalogURL(item.media);
+ if(service==='kinopoisk'&&item.kinopoiskId&&!episode)return kinopoiskPage(item.kinopoiskId,item.media).url;
  if(Object.hasOwn(CINEMA_MIRRORS,service))return cinemaMirrorURL(service,item);
  const year=typeof item.year==='string'?item.year.match(/\d{4}/)?.[0]||'':'';
  let query=[item.title.trim(),year].filter(Boolean).join(' ');
@@ -20,7 +21,8 @@ export function cinemaDiscovery(value){
 }
 export function cinemaWebURL(value){
  const url=new URL(value);if(url.protocol!=='https:'||url.username||url.password||url.port)throw new Error('Некорректная ссылка сервиса.');
- if(lordfilmPage(value))return url.href;
+ const lordfilm=lordfilmPage(value);if(lordfilm)return lordfilm;
+ if(url.hostname==='www.kinopoisk.ru'&&/^\/(?:film|series)\/[1-9]\d{0,9}\/$/.test(url.pathname)&&!url.search&&!url.hash)return url.href;
  if(cinemaMirrorPage(value))return url.href;
  const allowed={'www.youtube.com':['/results','search_query'],'www.kinopoisk.ru':['/index.php','kp_query'],'rutube.ru':['/search/','query'],'vkvideo.ru':['/','q']};const rule=allowed[url.hostname];
  if(rule&&url.pathname===rule[0]&&[...url.searchParams.keys()].every(key=>key===rule[1])&&url.searchParams.get(rule[1])?.length<=260&&!url.hash)return url.href;

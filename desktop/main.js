@@ -1,3 +1,4 @@
+import {durableJSON} from './durable-json.js';
 import {embeddedSource} from './source-view.js';
 import {lordfilmPage,lordfilmCatalogURL} from '../src/lordfilm.js';
 import {cinemaMirrorPage} from '../src/cinema-mirrors.js';
@@ -56,7 +57,21 @@ else {
     const trusted = event => {
       if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame) throw new Error('Недоступно');
     };
-    sourceView=embeddedSource({window:mainWindow,ipcMain,trusted});
+    const progress=durableJSON(path.join(userData,'playback-progress.json'),null);
+    ipcMain.on('playback:read',event=>{
+      try{trusted(event);event.returnValue=progress.read();}
+      catch{event.returnValue=null;}
+    });
+    ipcMain.handle('playback:write',(event,value,flushLibrary)=>{
+      trusted(event);
+      if(!Number.isFinite(value?.savedAt)||![480,720,1080].includes(value?.quality)||!value.progress||typeof value.progress!=='object'||Array.isArray(value.progress))return false;
+      if(value.savedAt<(progress.read()?.savedAt??0))return true;
+      if(flushLibrary)mainWindow.webContents.session.flushStorageData();
+      progress.write(value);
+      return true;
+    });
+    const externalProgress=durableJSON(path.join(userData,'external-playback.json'),[]);
+    sourceView=embeddedSource({window:mainWindow,ipcMain,trusted,externalProgress});
     const media=playerMedia({ipcMain,window:()=>mainWindow,trusted});
     mainWindow.on('close',()=>media.stop());
     const availability=()=>uninstallAvailability({packaged:app.isPackaged,exe:app.getPath('exe'),appData:app.getPath('appData'),userData:app.getPath('userData')});
