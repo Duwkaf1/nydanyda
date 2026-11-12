@@ -77,7 +77,10 @@ async function smokeExternalEpisodes({application,page,root}){
  await page.waitForFunction(async()=>((await window.kadr.sourceLastPlayback())?.time||0)>=18);
  await page.locator('#source-close').click();
  await page.locator('#source-workspace').waitFor({state:'hidden'});
- await page.getByRole('button',{name:'История',exact:true}).click();
+ const recent=await page.evaluate(()=>window.kadr.sourceLastPlayback());
+ assert.ok(recent?.time>=18,'saved external position must remain after closing its window');
+ await page.getByRole('button',{name:'История',exact:true}).evaluate(button=>button.click());
+ await page.waitForFunction(()=>document.querySelector('[data-view="history"]')?.getAttribute('aria-current')==='page',undefined,{timeout:5000});
  await page.locator('#resume-external-playback').waitFor({state:'visible',timeout:5000});
  const [second,opened]=await Promise.all([
   application.waitForEvent('window',{timeout:10000}),
